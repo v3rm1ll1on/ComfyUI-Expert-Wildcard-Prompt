@@ -40,6 +40,12 @@ class TestPromptParser(unittest.TestCase):
         pos_inc, _ = resolve_ast_to_prompt(ast_inc, random.Random(42))
         self.assertEqual(pos_inc, "portrait of a woman, glowing neon face tattoos")
 
+        # Test option-level skip chance regex consumption (ensuring no ? leaks into text)
+        text_option_skip = "{40%? flying dragons | 10%? floating magical islands}"
+        ast_opt = parse_prompt_to_ast(text_option_skip)
+        pos_opt, _ = resolve_ast_to_prompt(ast_opt, random.Random(42))
+        self.assertNotIn("?", pos_opt)
+
     def test_mute_and_solo_controls(self):
         """Test inline mute (//) and solo (!) controls."""
         # Mute test

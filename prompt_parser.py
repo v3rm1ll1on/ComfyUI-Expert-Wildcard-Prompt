@@ -222,7 +222,7 @@ class PromptParser:
 
             prob_weight = None
             rem_opt = self.input[self.pos:]
-            prob_match = re.match(r"^(\d+)%\s*", rem_opt)
+            prob_match = re.match(r"^(\d+)%\??\s*", rem_opt)
             if prob_match:
                 prob_weight = float(prob_match.group(1))
                 self.pos += len(prob_match.group(0))
