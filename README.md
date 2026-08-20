@@ -11,8 +11,8 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
   - **Relative Weighting**: `{70% blue | 30% green}` or `{5% red | blue | green}` (unweighted options default to weight `1.0`, while `5%` sets a relative weight multiplier of `5.0`).
 - **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely).
 - **Prompt Grouping**: `[GRP:NAME]` for organizing complex prompts. Groups can be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
-- **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them.
-- **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements.
+- **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them. Multiple `//` tags can be used simultaneously.
+- **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements. Multiple `!` tags can be used to keep a specific set of tags active.
 - **Dual Outputs (`positive` & `negative`)**: Generates both positive and negative strings from a unified node setup.
 - **Inline Negative Extraction (`-`)**: Prefix any tag or wildcard option with `-` (e.g., `-sunglasses`, `-umbrella`) to automatically route it into the `negative` output.
 - **`$negative` Placeholder Injection**: Insert `$negative` into your negative prompt field to specify the exact location where extracted `-` tags are injected.
@@ -46,38 +46,48 @@ Restart ComfyUI afterward.
 
 ---
 
-## Usage Examples
+## Usage Examples (From Basic to Expert)
 
-### 1. Weighted Probabilities & Nested Wildcards
+### 1. Basic Wildcards
+Randomly choose between simple options:
 ```text
-a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk rogue}
+a photo of a {cat | dog | fox} sitting on a bench
 ```
 
 ### 2. Equal vs. Relative Weights
+Control the likelihood of specific choices:
 ```text
 {5% rare red hair | blonde hair | brown hair | black hair}
 ```
 *(Red hair is 5x more likely to be selected than any individual default hair color).*
 
 ### 3. Skip Chance (Optional Tags)
+Add optional elements with a percentage chance of skipping:
 ```text
-{20%? glowing neon face tattoos}
+portrait of a woman, {20%? glowing neon face tattoos}
 ```
 *(20% chance to omit the tag entirely, 80% chance to include it).*
 
 ### 4. Mute & Solo Controls (`//` & `!`)
-
-- **Mute (`//`)**: Deactivates tags without removing them:
+Temporarily disable or isolate tags without editing your prompt text:
+- **Mute (`//`)**: Deactivates specific tags (supports multiple `//` in one prompt):
   ```text
-  masterpiece, // ruined background, leather jacket
+  masterpiece, // ruined background, leather jacket, // blurry lines
   ```
-- **Solo (`!`)**: Deactivates all non-solo tags in the prompt:
+- **Solo (`!`)**: Isolates only marked tags (supports multiple `!` tags):
   ```text
-  red dress, blue shoes, ! golden necklace
+  ! red dress, blue shoes, ! golden necklace
   ```
-  *(Output: `golden necklace`)*
+  *(Resulting output: `red dress, golden necklace`)*
 
-### 5. Grouping (`[GRP:NAME]`)
+### 5. Nested Wildcards & Probabilities
+Combine multiple levels of wildcards for complex variation:
+```text
+a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk rogue}
+```
+
+### 6. Prompt Grouping (`[GRP:NAME]`)
+Structure large prompts into organized blocks that can be muted or soloed as a whole:
 ```text
 [GRP:QUALITY], (masterpiece:1.2), ultra-detailed,
 
@@ -86,7 +96,8 @@ a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk r
 //[GRP:BACKGROUND], city skyline at dusk
 ```
 
-### 6. Dual Prompts with Inline Negative (`-` & `$negative`)
+### 7. Expert Dual-Prompting with Inline Negative (`-` & `$negative`)
+Combine positive wildcards, automatic negative extraction, and custom negative templates in one go:
 
 **`positive_prompt`**:
 ```text
