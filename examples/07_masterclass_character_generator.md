@@ -3,7 +3,7 @@
 The ultimate production-ready prompt template for hyper-realistic character generation.
 
 ### Positive Prompt
-```clojure
+```jinja2
 [GRP:SCENE], Elara Voss,
 
 [GRP:CHARACTER], {18-50} yo {Northern European woman, pale cool skin tone, {dark blond | platin blonde | honey blonde | ash blonde | golden blonde | chestnut brown | auburn | copper} {short bob | messy short hair | shoulder-length hair | bob cut | lob | shag haircut | layered mid-length hair | long flowing hair | wavy long hair | beach waves | messy bun | curtain bangs}, {blue | ice blue | clear blue | green | emerald green | forest green | brown | dark brown | hazel | grey} eyes | Mediterranean woman, warm olive skin tone, {dark brown | chestnut brown | jet black} {short bob | messy short hair | shoulder-length hair | bob cut | lob | shag haircut | layered mid-length hair | long flowing hair | wavy long hair | beach waves | messy bun | curtain bangs}, {dark brown | hazel | green | grey} eyes | East Asian woman, fair ivory skin tone, {jet black | dark espresso black} {short bob | messy short hair | shoulder-length hair | bob cut | lob | shag haircut | layered mid-length hair | long flowing hair | messy bun | curtain bangs}, {dark brown | black} eyes | South Asian woman, rich caramel skin tone, {jet black | dark espresso black} {long flowing hair | wavy long hair | curly long hair | layered mid-length hair | messy bun}, {dark brown | warm amber | hazel} eyes | Latina woman, golden tan skin tone, {chestnut brown | jet black | dark espresso black | ombre} {short bob | shoulder-length hair | long flowing hair | wavy long hair | curly long hair | beach waves | messy bun}, {dark brown | hazel | warm amber | green} eyes | Afro-Caribbean woman, deep espresso brown skin tone, {jet black | dark espresso black | auburn | copper} {tightly coiled 4C hair | locs | afro textured hair | short bob | messy bun}, {dark brown | warm amber} eyes | Middle Eastern woman, bronze skin tone, {dark espresso black | jet black} {long flowing hair | wavy long hair | curly long hair | layered mid-length hair | messy bun}, {dark brown | hazel | warm amber} eyes}, {subtle facial asymmetry, natural features | lifelike facial proportions}, {50%? subtle freckles, natural skin, -heavy makeup | light scattering of freckles | natural skin, no makeup, -heavy makeup, -makeup}, {oval face | round face, soft jawline | square face, defined jawline | heart-shaped face, soft high cheekbones}, {75%? fine crinkles around eyes, periorbital lines | subtle dimples, laugh lines | faint under-eye lines, realistic skin texturing}, {natural lips | thin lips | defined cupid's bow | full lower lip}, {straight nose | button nose | natural nose | aquiline nose}, -deformed eyes, -lazy eye, -crooked teeth,
@@ -28,6 +28,6 @@ The ultimate production-ready prompt template for hyper-realistic character gene
 ```
 
 ### Negative Prompt
-```clojure
+```jinja2
 teenager, child, $negative, infant, adolescent, bad anatomy, deformed features, poorly drawn hands, extra limbs, ugly, disfigured, blurriness, glamour, fashion model, doll, studio flash, reflection, tripod, 3d render, cg, digital painting, perfect face, symmetrical face, over-sharpened, high heels, runway fashion, deformed clothing, bad proportions, fake breasts, barbie doll, heavily edited
 ```
