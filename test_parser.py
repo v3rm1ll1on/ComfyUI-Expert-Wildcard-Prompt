@@ -254,5 +254,13 @@ class TestPromptParser(unittest.TestCase):
         # {18-50} -> 25, {0-10:2} -> 0 (from [0,2,4,6,8,10]), {0-10:3} -> 6 (from [0,3,6,9])
         self.assertEqual(pos, "25 yo, 0 step, 6 step3")
 
+    def test_negative_tag_starting_with_digit(self):
+        """Test negative extraction tags starting with digits like -3d render."""
+        text = "photo, -3d render, -2D art"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "photo")
+        self.assertEqual(neg, "3d render, 2D art")
+
 if __name__ == '__main__':
     unittest.main()

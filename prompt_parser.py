@@ -177,7 +177,11 @@ class PromptParser:
             is_muted = True
             self.skip_whitespace()
 
-        if self.match("-") and not (self.peek() and self.peek().isdigit()):
+        # Check for negative extraction prefix '-'
+        # Ensure it is not a negative numeric value like '-0.5' in weights or LoRAs
+        rem_minus = self.input[self.pos:]
+        if rem_minus.startswith("-") and not re.match(r"^-\d+(?:\.\d+)?(?:\s*[,\|\)]|$)", rem_minus):
+            self.match("-")
             is_negative = True
             self.skip_whitespace()
 
