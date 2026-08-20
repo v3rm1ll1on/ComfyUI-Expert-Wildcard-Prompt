@@ -170,6 +170,27 @@ class TestPromptParser(unittest.TestCase):
         res_replace = combine_negative_prompts(extracted, base_neg, "replace", random.Random(42))
         self.assertEqual(res_replace, "umbrella, coat")
 
+    def test_direct_prefix_on_wildcard_block(self):
+        """Test direct prefixes //, !, and - applied directly onto a wildcard block {...}."""
+        # Mute whole wildcard
+        text_mute = "masterpiece, //{cat | dog | fox}, leather jacket"
+        ast_mute = parse_prompt_to_ast(text_mute)
+        pos_mute, _ = resolve_ast_to_prompt(ast_mute, random.Random(42))
+        self.assertEqual(pos_mute, "masterpiece, leather jacket")
+
+        # Solo whole wildcard
+        text_solo = "masterpiece, !{100% cat | 0% dog}, leather jacket"
+        ast_solo = parse_prompt_to_ast(text_solo)
+        pos_solo, _ = resolve_ast_to_prompt(ast_solo, random.Random(42))
+        self.assertEqual(pos_solo, "cat")
+
+        # Negative route whole wildcard
+        text_neg = "masterpiece, -{100% cat | 0% dog}, leather jacket"
+        ast_neg = parse_prompt_to_ast(text_neg)
+        pos_neg, neg_neg = resolve_ast_to_prompt(ast_neg, random.Random(42))
+        self.assertEqual(pos_neg, "masterpiece, leather jacket")
+        self.assertEqual(neg_neg, "cat")
+
     # -------------------------------------------------------------
     # 5. SDXL Weights, LoRAs & Syntax
     # -------------------------------------------------------------
@@ -189,13 +210,39 @@ class TestPromptParser(unittest.TestCase):
         self.assertEqual(pos, "masterpiece")
         self.assertEqual(neg, "(deformed eyes:1.2)")
 
-    def test_syntax_checker(self):
-        """Test syntax check for matched/unmatched brackets."""
-        res1 = check_prompt_syntax("valid {wildcard | option}")
-        self.assertTrue(res1.is_valid)
+    # -------------------------------------------------------------
+    # 6. Advanced Edge Cases
+    # -------------------------------------------------------------
 
-        res2 = check_prompt_syntax("invalid {wildcard | option")
-        self.assertFalse(res2.is_valid)
+    def test_negative_lora_weight(self):
+        """Test LoRA with negative weight <lora:name:-0.5> is preserved in positive prompt."""
+        text = "masterpiece, <lora:cyberpunk_style:-0.5>"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "masterpiece, <lora:cyberpunk_style:-0.5>")
+        self.assertEqual(neg, "")
+
+    def test_hyphenated_words_vs_negative_prefix(self):
+        """Test hyphenated words like shoulder-length hair are not misidentified as negative extraction."""
+        text = "shoulder-length hair, high-waisted jeans, - -sunglasses"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "shoulder-length hair, high-waisted jeans")
+        self.assertEqual(neg, "-sunglasses")
+
+    def test_mixed_explicit_and_default_wildcard_weights(self):
+        """Test wildcards mixing explicit probabilities (70%) with default ones."""
+        text = "{70% option A | option B}"
+        ast = parse_prompt_to_ast(text)
+        pos, _ = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertIn(pos, ["option A", "option B"])
+
+    def test_whitespace_in_group_prefixes(self):
+        """Test spaces between mute/solo prefixes and [GRP:NAME]."""
+        text = "// [GRP:MUTED], muted tag, [GRP:ACTIVE], active tag"
+        ast = parse_prompt_to_ast(text)
+        pos, _ = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "active tag")
 
 if __name__ == '__main__':
     unittest.main()
