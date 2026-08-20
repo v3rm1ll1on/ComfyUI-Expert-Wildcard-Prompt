@@ -1,28 +1,28 @@
 # Expert Text Prompt for ComfyUI
 
-A powerful ComfyUI custom node with AST-based parsing, advanced wildcards, probabilistic weighting, skip chances, prompt grouping, dual positive/negative outputs, inline negative extraction (`-`), `$negative` placeholder injection, and inline Mute/Solo controls.
+A lightweight, pure-Python ComfyUI custom node featuring AST-based prompt parsing, advanced wildcards, probabilistic weighting, skip chances, prompt grouping, dual positive/negative outputs, inline negative extraction (`-`), `$negative` placeholder injection, and inline Mute/Solo controls.
 
 ---
 
 ## Features
 
-- **Dual Outputs**: Directly feeds both `positive` and `negative` conditioning inputs from a single prompt structure.
-- **Inline Negative Prefix (`-`)**: Prefix any tag or wildcard option with `-` (e.g. `-sunglasses`, `-umbrella`) to automatically route it into the `negative` output.
-- **`$negative` Placeholder Injection**: Place `$negative` anywhere in your negative prompt text field to define the exact spot where extracted `-` tags are injected.
+- **Pure Python Implementation**: No fragile frontend JavaScript dependencies, maximum stability across all ComfyUI updates.
+- **Dual Outputs (`positive` & `negative`)**: Generates both positive and negative strings from a unified node setup.
+- **Inline Negative Extraction (`-`)**: Prefix any tag or wildcard option with `-` (e.g., `-sunglasses`, `-umbrella`) to automatically route it into the `negative` output.
+- **`$negative` Placeholder Injection**: Insert `$negative` into your negative prompt field to specify the exact location where extracted `-` tags are injected.
 - **Flexible Negative Modes**:
-  - `auto (use $negative)`: Injects into `$negative` if present, otherwise prepends.
-  - `prepend`: Always places extracted negative tags at the very start.
-  - `append`: Always appends extracted negative tags at the very end.
-  - `replace`: Replaces the negative prompt field completely.
-- **Advanced Wildcards**: `{option1 | option2 | option3}`
+  - `auto (use $negative)`: Injects extracted tags into the `$negative` placeholder if present, otherwise prepends them.
+  - `prepend`: Places extracted negative tags at the very start.
+  - `append`: Appends extracted negative tags at the very end.
+  - `replace`: Overwrites the negative prompt field completely.
+- **Advanced Wildcards**: `{option1 | option2 | option3}` with full support for nested wildcards.
 - **Probabilistic Weighting**: `{70% blue eyes | 30% green eyes}`
-- **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely)
-- **Prompt Grouping**: `[GRP:NAME]` for clean prompt organization. Groups can also be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
+- **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely).
+- **Prompt Grouping**: `[GRP:NAME]` for organizing complex prompts. Groups can be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
 - **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them.
-- **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring everything else in the prompt.
-- **SDXL Weights & LoRAs**: Native support for `(tag:1.2)` and `<lora:name:1.0>`.
-- **Deterministic Seed**: Reproducible wildcard selection based on input seed.
-- **Visual Syntax Check**: Node background highlights in dark red if brackets `()`, `{}` or `[]` are mismatched or unclosed.
+- **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements.
+- **SDXL Weights & LoRAs**: Full native support for `(tag:1.2)` and `<lora:name:1.0>`.
+- **Deterministic Seed**: Reproducible wildcard resolution based on input seed.
 
 ---
 
@@ -46,37 +46,36 @@ Restart ComfyUI afterward.
 
 ---
 
-## Syntax & Examples
+## Usage Examples
 
-### 1. Dual Prompt & Inline Negative (`-` & `$negative`)
+### 1. Dual Prompts with Inline Negative (`-` & `$negative`)
 
-- **`positive_prompt`**:
-  ```text
-  [GRP:CHARACTER], portrait of a young woman, {70% sunny day, -sunglasses | 30% rainy day, -umbrella}, leather jacket
-  ```
-- **`negative_prompt`**:
-  ```text
-  (3d render, cgi, plastic skin:1.3), $negative, (deformed hands:1.2), blurry
-  ```
+**`positive_prompt`**:
+```text
+[GRP:CHARACTER], portrait of a young woman, {70% sunny day, -sunglasses | 30% rainy day, -umbrella}, leather jacket
+```
 
-**Resulting Outputs:**
-- If `sunny day` is selected:
+**`negative_prompt`**:
+```text
+(3d render, cgi, plastic skin:1.3), $negative, (deformed hands:1.2), blurry
+```
+
+**Output Results:**
+- If `sunny day` is selected by the seed:
   - `positive`: `portrait of a young woman, sunny day, leather jacket`
   - `negative`: `(3d render, cgi, plastic skin:1.3), sunglasses, (deformed hands:1.2), blurry`
-- If `rainy day` is selected:
+- If `rainy day` is selected by the seed:
   - `positive`: `portrait of a young woman, rainy day, leather jacket`
   - `negative`: `(3d render, cgi, plastic skin:1.3), umbrella, (deformed hands:1.2), blurry`
 
 ---
 
-### 2. Wildcards with Weighted Probabilities
-Specify explicit chances for each option:
+### 2. Weighted Probabilities & Nested Wildcards
 ```text
-a {70% cyberpunk female hacker | 30% futuristic street runner}
+a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk rogue}
 ```
 
 ### 3. Skip Chance (Optional Tags)
-Prepend `X%?` inside a wildcard block to specify the probability that the enclosed tags will be skipped:
 ```text
 {20%? glowing neon face tattoos}
 ```
@@ -84,18 +83,17 @@ Prepend `X%?` inside a wildcard block to specify the probability that the enclos
 
 ### 4. Mute & Solo Controls (`//` & `!`)
 
-- **Mute (`//`)**: Disables a tag or group without removing it from your text:
+- **Mute (`//`)**: Deactivates tags without removing them:
   ```text
   masterpiece, // ruined background, leather jacket
   ```
-- **Solo (`!`)**: Temporarily ignores all non-solo tags in the prompt and focuses strictly on the solo tag:
+- **Solo (`!`)**: Deactivates all non-solo tags in the prompt:
   ```text
   red dress, blue shoes, ! golden necklace
   ```
-  *(Resulting output: `golden necklace`)*
+  *(Output: `golden necklace`)*
 
 ### 5. Grouping (`[GRP:NAME]`)
-Structure your prompts into logical blocks. Groups can also be muted or set to solo:
 ```text
 [GRP:QUALITY], (masterpiece:1.2), ultra-detailed,
 
@@ -110,9 +108,9 @@ Structure your prompts into logical blocks. Groups can also be muted or set to s
 
 - **Inputs**:
   - `positive_prompt`: Main prompt text supporting wildcards, Mute/Solo, weights, and `-` negative tags.
-  - `negative_prompt`: Standard negative prompt field supporting `$negative` placeholder injection.
+  - `negative_prompt`: Secondary prompt field supporting the `$negative` placeholder.
   - `negative_mode`: Options: `auto (use $negative)`, `prepend`, `append`, `replace`.
-  - `seed`: Controls the random seed for reproducible wildcard selections.
+  - `seed`: Random seed for reproducible wildcard selections.
 - **Outputs**:
   - `positive`: Connects to `CLIP Text Encode (Positive)`.
   - `negative`: Connects to `CLIP Text Encode (Negative)`.
