@@ -16,7 +16,7 @@ Demonstrates prompt organization using groups `[GRP:NAME]`, percentage weighting
 
 **Negative Prompt**
 ```text
-(3d render, cgi, illustration, plastic skin:1.3), $negative, (deformed hands:1.2), blur, watermark
+(3d render, cgi, illustration, plastic skin:1.3), (deformed hands:1.2), blur, watermark
 ```
 
 ---
@@ -33,7 +33,7 @@ Demonstrates prompt organization using groups `[GRP:NAME]`, percentage weighting
 
 **Negative Prompt**
 ```text
-photo, realistic, low contrast, $negative
+photo, realistic, low contrast
 ```
 
 ---
@@ -50,5 +50,5 @@ photo, realistic, low contrast, $negative
 
 **Negative Prompt**
 ```text
-daylight, sun, trees, nature, $negative
+daylight, sun, trees, nature
 ```

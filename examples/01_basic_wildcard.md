@@ -13,7 +13,7 @@ a photo of a {cat | dog | red panda | fox} sitting on a wooden bench in a park
 
 **Negative Prompt**
 ```text
-(3d render, cgi:1.3), $negative, (deformed hands:1.2), blurry
+(3d render, cgi:1.3), (deformed hands:1.2), blurry
 ```
 
 ---
@@ -27,7 +27,7 @@ majestic mountain peak, {sunset sky | stormy dramatic clouds | misty foggy morni
 
 **Negative Prompt**
 ```text
-blurry, low quality, oversaturated, $negative
+blurry, low quality, oversaturated
 ```
 
 ---
@@ -41,7 +41,7 @@ a sleek futuristic {sports car | hoverbike | armored transport vehicle | space s
 
 **Negative Prompt**
 ```text
-rust, old, broken, $negative
+rust, old, broken, damage
 ```
 
 ---
@@ -55,5 +55,5 @@ an exquisite oil painting of a medieval castle during {spring blossom | heavy wi
 
 **Negative Prompt**
 ```text
-photo, 3d render, modern, $negative
+photo, 3d render, modern
 ```
