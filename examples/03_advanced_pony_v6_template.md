@@ -1,8 +1,16 @@
-=== POSITIVE PROMPT ===
+# 03 - Advanced Pony V6 Template
+
+Optimized template for Pony Diffusion V6 using score groups, nested wildcards, and negative score templates.
+
+### Positive Prompt
+```text
 [GRP:PONY_SCORES], score_9, score_8_up, score_7_up, rating_safe,
 [GRP:CHARACTER], 1girl, solo, {70% anime warrior girl with {70% knight armor | 30% cyber suit} | 30% cyberpunk rogue}, {5% rare silver hair | blonde hair | black hair},
 [GRP:ACTION], {70% standing calmly, holding a sword | 30% in an aggressive action pose},
 [GRP:BG], {70% sunny day in a forest, -sunglasses | 30% rainy city alley, -umbrella}
+```
 
-=== NEGATIVE PROMPT ===
+### Negative Prompt
+```text
 score_4_up, score_5_up, score_6_up, (3d render, cgi:1.3), $negative, (deformed eyes:1.2), bad anatomy, extra limbs
+```
