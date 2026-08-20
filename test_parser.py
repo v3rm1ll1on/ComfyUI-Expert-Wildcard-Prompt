@@ -3,6 +3,12 @@ import random
 from prompt_parser import parse_prompt_to_ast, resolve_ast_to_prompt, combine_negative_prompts, check_prompt_syntax
 
 class TestPromptParser(unittest.TestCase):
+    def test_prose_wildcard_spacing(self):
+        text = "a photo of a {cat | dog | fox} sitting on a bench"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "a photo of a dog sitting on a bench")
+
     def test_wildcards_and_percentages(self):
         text = "{100% blue shirt | 0% red shirt}"
         ast = parse_prompt_to_ast(text)

@@ -8,7 +8,7 @@ class ASTNode:
         self.is_muted = is_muted
         self.is_solo = is_solo
         self.is_negative = is_negative
-        self.prefix_separator = prefix_separator
+        self.prefix_separator = prefix_separator  # "", " ", ","
 
 
 class ASTTag(ASTNode):
@@ -261,7 +261,7 @@ def parse_prompt_to_ast(text: str) -> List[ASTGroup]:
         if parsed_groups:
             parsed_groups[-1]["content"] += content
         elif content.strip():
-            parsed_groups.append({"prefix": "", "name": "GENERAL", "content": content})
+            parsed_groups.append({"prefix": "", "name": "GENERAL", "content": text})
 
     if not parsed_groups:
         parsed_groups.append({"prefix": "", "name": "GENERAL", "content": text})
@@ -280,6 +280,30 @@ def parse_prompt_to_ast(text: str) -> List[ASTGroup]:
     return groups
 
 
+def build_text_with_separators(items: List[Tuple[str, str]]) -> str:
+    """
+    Kombiniert (Text, Separatortyp)-Tupel zu einem sauberen Satz oder Tag-String.
+    Verhindert doppelte Kommas oder ungewollte Kommas in Fließtexten.
+    """
+    result = ""
+    for idx, (text, sep) in enumerate(items):
+        if not text:
+            continue
+        if idx == 0:
+            result += text
+        else:
+            if sep == ",":
+                result = result.rstrip(" ,") + ", " + text.lstrip(" ,")
+            else:
+                result = result.rstrip() + " " + text.lstrip()
+
+    # Nachbereinigung von mehrfachen Kommas/Leerzeichen
+    result = re.sub(r"\s*,\s*", ", ", result)
+    result = re.sub(r" +,", ",", result)
+    result = re.sub(r" +", " ", result)
+    return result.strip(" ,")
+
+
 def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[str, str]:
     has_solo = any(
         g.is_solo or any(n.is_solo for n in g.nodes)
@@ -293,8 +317,8 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[s
             return node.is_solo or group_is_solo
         return True
 
-    resolved_positive = []
-    resolved_negative = []
+    resolved_positive: List[Tuple[str, str]] = []
+    resolved_negative: List[Tuple[str, str]] = []
 
     for group in groups:
         if group.is_muted and not (has_solo and group.is_solo):
@@ -308,20 +332,21 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[s
             resolved_positive.extend(pos_tags)
             resolved_negative.extend(neg_tags)
 
-    pos_str = ", ".join(filter(None, resolved_positive))
-    neg_str = ", ".join(filter(None, resolved_negative))
+    pos_str = build_text_with_separators(resolved_positive)
+    neg_str = build_text_with_separators(resolved_negative)
     return pos_str, neg_str
 
 
-def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_negative: bool, rng: random.Random, has_solo: bool) -> Tuple[List[str], List[str]]:
+def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_negative: bool, rng: random.Random, has_solo: bool) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
     is_neg = node.is_negative or parent_negative
+    sep = node.prefix_separator or " "
 
     if isinstance(node, ASTTag):
         text = node.text if node.is_lora else format_sdxl_weight(node.text, node.weight)
         if is_neg:
-            return [], [text]
+            return [], [(text, sep)]
         else:
-            return [text], []
+            return [(text, sep)], []
 
     elif isinstance(node, ASTWildcard):
         if node.skip_chance is not None:
@@ -337,12 +362,20 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
 
         sub_pos = []
         sub_neg = []
-        for child in chosen_option.nodes:
+        for idx, child in enumerate(chosen_option.nodes):
             if child.is_muted:
                 continue
             if has_solo and not (child.is_solo or parent_solo or node.is_solo):
                 continue
+
             pos_tags, neg_tags = resolve_node(child, parent_solo or node.is_solo, parent_muted, is_neg, rng, has_solo)
+            
+            # Für das erste Kind in einer Wildcard übernehmen wir den Separator der Wildcard selbst
+            if idx == 0 and pos_tags:
+                pos_tags[0] = (pos_tags[0][0], sep)
+            if idx == 0 and neg_tags:
+                neg_tags[0] = (neg_tags[0][0], sep)
+
             sub_pos.extend(pos_tags)
             sub_neg.extend(neg_tags)
 
@@ -382,4 +415,3 @@ def combine_negative_prompts(extracted_neg: str, base_neg_input: str, mode: str,
         return f"{base_text}, {extracted_neg}".strip(" ,")
     else:  # prepend
         return f"{extracted_neg}, {base_text}".strip(" ,")
-
