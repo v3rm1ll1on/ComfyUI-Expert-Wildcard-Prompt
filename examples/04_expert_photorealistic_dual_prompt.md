@@ -9,7 +9,7 @@ Demonstrates all advanced features:
 ### Positive Prompt
 ```text
 [GRP:STYLE], RAW photorealistic shot, 35mm lens, f/1.8 aperture, natural lighting, subsurface scattering,
-[GRP:SUBJECT], cinematic portrait of a {60% female hacker with {70% cybernetic eye implants, -glasses | 30% holographic visor, -sunglasses} | 40% street runner},
+[GRP:SUBJECT], ! cinematic portrait of a {60% female hacker with {70% cybernetic eye implants, -glasses | 30% holographic visor, -sunglasses} | 40% street runner},
 [GRP:ENVIRONMENT], {70% standing in a neon-lit cyberpunk alley, -sunlight | 30% inside a high-tech server room, -nature},
 [GRP:EXPERIMENTAL_OVERLAY], glitch art effect, // chromatic aberration
 ```
