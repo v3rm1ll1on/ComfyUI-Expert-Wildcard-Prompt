@@ -1,15 +1,5 @@
 import { app } from "../../../scripts/app.js";
 
-// Rainbow colors for nested brackets
-const BRACKET_COLORS = [
-    "#3b82f6", // Blue
-    "#ec4899", // Pink
-    "#10b981", // Emerald
-    "#f59e0b", // Amber
-    "#8b5cf6", // Purple
-    "#06b6d4"  # Cyan
-];
-
 app.registerExtension({
     name: "ExpertTextPrompt.Colorizer",
     async nodeCreated(node) {
@@ -26,14 +16,23 @@ app.registerExtension({
                 }
             }
 
-            // Find the multiline text widget
-            const textWidget = node.widgets?.find(w => w.name === "text");
-            if (textWidget) {
-                // Add syntax check on value change
-                const originalCallback = textWidget.callback;
-                textWidget.callback = function (val) {
+            // Find multiline text widgets
+            const posWidget = node.widgets?.find(w => w.name === "positive_prompt");
+            const negWidget = node.widgets?.find(w => w.name === "negative_prompt");
+
+            if (posWidget) {
+                const origPos = posWidget.callback;
+                posWidget.callback = function (val) {
                     checkSyntaxAndWarn(node, val);
-                    if (originalCallback) return originalCallback.apply(this, arguments);
+                    if (origPos) return origPos.apply(this, arguments);
+                };
+            }
+
+            if (negWidget) {
+                const origNeg = negWidget.callback;
+                negWidget.callback = function (val) {
+                    checkSyntaxAndWarn(node, val);
+                    if (origNeg) return origNeg.apply(this, arguments);
                 };
             }
         }
@@ -44,7 +43,6 @@ function checkSyntaxAndWarn(node, text) {
     if (!text) return;
     const stack = [];
     let isValid = true;
-    let errorMsg = "";
 
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
@@ -54,7 +52,6 @@ function checkSyntaxAndWarn(node, text) {
             const expected = { "}": "{", ")": "(", "]": "[" }[char];
             if (stack.length === 0 || stack[stack.length - 1].char !== expected) {
                 isValid = false;
-                errorMsg = `Mismatched bracket '${char}' at position ${i}`;
                 break;
             } else {
                 stack.pop();
@@ -64,12 +61,10 @@ function checkSyntaxAndWarn(node, text) {
 
     if (isValid && stack.length > 0) {
         isValid = false;
-        errorMsg = `Unclosed bracket '${stack[stack.length - 1].char}' at position ${stack[stack.length - 1].pos}`;
     }
 
     if (!isValid) {
-        node.bgcolor = "#451a1a"; // Dark red background on error
-        node.title_mode = 1;
+        node.bgcolor = "#451a1a"; // Dark red background on syntax error
     } else {
         node.bgcolor = undefined; // Reset background
     }
