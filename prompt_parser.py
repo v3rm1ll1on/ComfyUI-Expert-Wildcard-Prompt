@@ -356,27 +356,30 @@ def combine_negative_prompts(extracted_neg: str, base_neg_input: str, mode: str,
     Kombiniert extrahierte Negativ-Tags mit dem zweiten Negativ-Textfeld.
     Unterstützt den `$negative` Platzhalter sowie prepend, append, replace.
     """
-    # 1. Parse base_neg_input durch AST (falls der negative Prompt selbst Wildcards / -Tags enthält)
+    # 1. Parse base_neg_input durch AST
     if base_neg_input.strip():
         base_ast = parse_prompt_to_ast(base_neg_input)
         base_pos, extra_base_neg = resolve_ast_to_prompt(base_ast, rng)
-        # Für den negativen Prompt verbinden wir dessen positive & negative Anteile
         base_text = ", ".join(filter(None, [base_pos, extra_base_neg]))
     else:
         base_text = ""
 
+    # Wenn der User explizit prepend, append oder replace wählt, $negative Platzhalter aus base_text entfernen
+    if mode in ["prepend", "append", "replace"]:
+        base_text = re.sub(r"\$negative\b", "", base_text).strip(" ,")
+
     if not extracted_neg:
-        # Falls keine "-" Tags extrahiert wurden, Platzhalter $negative einfach entfernen
         return re.sub(r"\$negative\b", "", base_text).strip(" ,")
 
-    # 2. Prüfen auf $negative Platzhalter
-    if "$negative" in base_text:
-        return base_text.replace("$negative", extracted_neg)
-
-    # 3. Platzhalter nicht vorhanden -> Nutze Modus (prepend, append, replace)
-    if mode == "replace":
+    # Mode Handling:
+    if mode == "auto (use $negative)" or mode == "auto":
+        if "$negative" in base_text:
+            return base_text.replace("$negative", extracted_neg)
+        return f"{extracted_neg}, {base_text}".strip(" ,")
+    elif mode == "replace":
         return extracted_neg
     elif mode == "append":
         return f"{base_text}, {extracted_neg}".strip(" ,")
-    else:  # default: prepend
+    else:  # prepend
         return f"{extracted_neg}, {base_text}".strip(" ,")
+

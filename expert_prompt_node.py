@@ -13,7 +13,7 @@ class ExpertTextPromptNode:
             "required": {
                 "positive_prompt": ("STRING", {"multiline": True, "default": ""}),
                 "negative_prompt": ("STRING", {"multiline": True, "default": "(3d render, cgi:1.3), $negative, (deformed hands:1.2)"}),
-                "negative_mode": (["prepend", "append", "replace"], {"default": "prepend"}),
+                "negative_mode": (["auto (use $negative)", "prepend", "append", "replace"], {"default": "auto (use $negative)"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
             }
         }

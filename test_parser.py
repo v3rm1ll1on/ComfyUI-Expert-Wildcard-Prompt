@@ -20,7 +20,7 @@ class TestPromptParser(unittest.TestCase):
     def test_negative_placeholder_injection(self):
         extracted = "umbrella, coat"
         base_neg = "(3d render:1.3), $negative, (deformed hands:1.2)"
-        res = combine_negative_prompts(extracted, base_neg, "prepend", random.Random(42))
+        res = combine_negative_prompts(extracted, base_neg, "auto (use $negative)", random.Random(42))
         self.assertEqual(res, "(3d render:1.3), umbrella, coat, (deformed hands:1.2)")
 
     def test_negative_modes_without_placeholder(self):
