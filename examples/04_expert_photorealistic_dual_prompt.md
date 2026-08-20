@@ -3,15 +3,15 @@
 Demonstrates all advanced features:
 - Dual-output routing with inline negative extraction (`-`)
 - Precise placement via `$negative` placeholder
-- Group-level mute (`//[GRP:]`) and tag-level solo (`!`)
-- Nested probabilistic wildcards
+- Group-level organization (`[GRP:]`) and tag-level solo (`!`)
+- Inline tag muting (`//`) and nested probabilistic wildcards
 
 ### Positive Prompt
 ```text
 [GRP:STYLE], RAW photorealistic shot, 35mm lens, f/1.8 aperture, natural lighting, subsurface scattering,
 [GRP:SUBJECT], ! cinematic portrait of a {60% female hacker with {70% cybernetic eye implants, -glasses | 30% holographic visor, -sunglasses} | 40% street runner},
 [GRP:ENVIRONMENT], {70% standing in a neon-lit cyberpunk alley, -sunlight | 30% inside a high-tech server room, -nature},
-//[GRP:EXPERIMENTAL_OVERLAY], // glitch art effect, // chromatic aberration
+[GRP:EXPERIMENTAL_OVERLAY], glitch art effect, // chromatic aberration
 ```
 
 ### Negative Prompt
