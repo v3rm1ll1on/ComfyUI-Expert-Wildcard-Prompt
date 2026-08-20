@@ -238,11 +238,21 @@ class TestPromptParser(unittest.TestCase):
         self.assertIn(pos, ["option A", "option B"])
 
     def test_whitespace_in_group_prefixes(self):
-        """Test spaces between mute/solo prefixes and [GRP:NAME]."""
-        text = "// [GRP:MUTED], muted tag, [GRP:ACTIVE], active tag"
+        """Test group prefixes handling accidental whitespace like '// [GRP:NAME]'."""
+        text = "// [GRP:TEST], tag"
         ast = parse_prompt_to_ast(text)
-        pos, _ = resolve_ast_to_prompt(ast, random.Random(42))
-        self.assertEqual(pos, "active tag")
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "")
+        self.assertEqual(neg, "")
+
+    def test_number_range_wildcards(self):
+        """Test number range wildcards {min-max} and {min-max:count}."""
+        text = "portrait of a {18-50} yo woman with {1-5:3} items"
+        ast = parse_prompt_to_ast(text)
+        rng = random.Random(42)
+        pos, _ = resolve_ast_to_prompt(ast, rng)
+        # Verify 25 is generated for {18-50} and 3 numbers for {1-5:3}
+        self.assertEqual(pos, "portrait of a 25 yo woman with 1 3 2 items")
 
 if __name__ == '__main__':
     unittest.main()

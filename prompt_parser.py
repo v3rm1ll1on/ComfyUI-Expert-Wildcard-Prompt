@@ -32,6 +32,15 @@ class ASTWildcard(ASTNode):
         self.options = options
 
 
+class ASTNumberRange(ASTNode):
+    def __init__(self, min_val: int, max_val: int, count: int = 1, skip_chance: Optional[float] = None, **kwargs):
+        super().__init__(**kwargs)
+        self.min_val = min_val
+        self.max_val = max_val
+        self.count = count
+        self.skip_chance = skip_chance
+
+
 class ASTGroup:
     def __init__(self, name: str, nodes: List[ASTNode], is_muted: bool = False, is_solo: bool = False, is_negative: bool = False):
         self.name = name
@@ -217,7 +226,7 @@ class PromptParser:
             prefix_separator=prefix_separator
         )
 
-    def parse_wildcard(self) -> Optional[ASTWildcard]:
+    def parse_wildcard(self) -> Optional[ASTNode]:
         self.match("{")
         self.skip_whitespace()
 
@@ -227,6 +236,16 @@ class PromptParser:
         if skip_match:
             skip_chance = float(skip_match.group(1))
             self.pos += len(skip_match.group(0))
+
+        # Check for number range syntax {min-max} or {min-max:count}
+        range_rem = self.input[self.pos:]
+        range_match = re.match(r"^(\d+)-(\d+)(?::(\d+))?\s*\}", range_rem)
+        if range_match:
+            min_v = int(range_match.group(1))
+            max_v = int(range_match.group(2))
+            count_v = int(range_match.group(3)) if range_match.group(3) else 1
+            self.pos += len(range_match.group(0))
+            return ASTNumberRange(min_val=min_v, max_val=max_v, count=count_v, skip_chance=skip_chance)
 
         options = []
         while self.pos < len(self.input) and self.peek() != "}":
@@ -355,6 +374,20 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
 
     if isinstance(node, ASTTag):
         text = node.text if node.is_lora else format_sdxl_weight(node.text, node.weight)
+        if is_neg:
+            return [], [(text, sep)]
+        else:
+            return [(text, sep)], []
+
+    elif isinstance(node, ASTNumberRange):
+        if node.skip_chance is not None:
+            roll = rng.uniform(0, 100)
+            if roll < node.skip_chance:
+                return [], []
+
+        nums = [str(rng.randint(node.min_val, node.max_val)) for _ in range(node.count)]
+        text = " ".join(nums)
+
         if is_neg:
             return [], [(text, sep)]
         else:
