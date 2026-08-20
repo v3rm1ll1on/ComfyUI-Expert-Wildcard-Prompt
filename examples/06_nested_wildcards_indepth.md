@@ -1,11 +1,27 @@
 # 06 - Nested Wildcards In-Depth Examples
 
-Comprehensive examples showcasing deep wildcard nesting, combined probabilities, skip-chances (`X%?`), and inline negative tag routing (`-`).
+Comprehensive examples showcasing deep wildcard nesting, combined probabilities, skip-chances (`X%?`), and inline negative tag routing (`-`)—both in plain text prompts and structured groups.
 
 ---
 
-### Example A: Character Archetype & Armor Generator (2-Level Nesting)
-Generates complex character variations with sub-options for armor, coats, and inline negative tag routing.
+### Step 1: Pure Nested Wildcards (Without Groups)
+
+Demonstrates 2-level and 3-level nesting in a clean, continuous prompt line without any group tags:
+
+#### Positive Prompt
+```text
+RAW photorealistic portrait of a {60% female warrior with {70% full plate knight armor, -dress | 30% cybernetic power suit, -glasses} | 40% cyberpunk rogue wearing {50% a leather coat, -hood | 50% a hooded cloak, -hat}}, {60% standing in ancient ruins | 40% inside a neon alleyway}
+```
+
+#### Negative Prompt Template
+```text
+(3d render, cgi, illustration:1.3), $negative, (deformed hands:1.2), blur
+```
+
+---
+
+### Step 2: Character Archetype & Armor Generator (2-Level Nesting with Groups)
+Organize deep wildcard structures into dedicated group headers:
 
 #### Positive Prompt
 ```text
@@ -29,7 +45,7 @@ Generates complex character variations with sub-options for armor, coats, and in
 
 ---
 
-### Example B: Multi-Layer Environment & Weather (3-Level Nesting)
+### Step 3: Multi-Layer Environment & Weather (3-Level Nesting)
 Combines season, weather condition, time of day, and inline negative tags across 3 deep wildcard levels.
 
 #### Positive Prompt
@@ -54,7 +70,7 @@ Combines season, weather condition, time of day, and inline negative tags across
 
 ---
 
-### Example C: Deep Nested Creature & Accessory Generator (3-Level Nesting with Skip Chance)
+### Step 4: Deep Nested Creature & Accessory Generator (3-Level Nesting with Skip Chance)
 Demonstrates how optional skip-chance tags (`X%?`) interact inside deep nested wildcard choices.
 
 #### Positive Prompt

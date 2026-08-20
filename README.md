@@ -73,12 +73,12 @@ We provide a dedicated [`examples/`](./examples) directory with detailed Markdow
 
 | Example File | Topic & Level | Description |
 | :--- | :--- | :--- |
-| **[`01_basic_wildcard.md`](./examples/01_basic_wildcard.md)** | Beginner | Basic wildcard selections (`{A \| B \| C}`) across animals, landscapes, and cars. |
-| **[`02_intermediate_groups_and_weights.md`](./examples/02_intermediate_groups_and_weights.md)** | Intermediate | Percentage weighting (`70%`), skip chances (`20%?`), and groups (`[GRP:]`). |
+| **[`01_basic_wildcard.md`](./examples/01_basic_wildcard.md)** | Beginner | Step-by-step introduction from single wildcards to nested wildcard structures. |
+| **[`02_intermediate_groups_and_weights.md`](./examples/02_intermediate_groups_and_weights.md)** | Intermediate | Percentage weighting (`70%`), skip chances (`20%?`), and introducing groups (`[GRP:]`). |
 | **[`03_advanced_pony_v6_template.md`](./examples/03_advanced_pony_v6_template.md)** | Advanced | Specialized templates for Pony Diffusion V6 with score groups & anime styles. |
 | **[`04_expert_photorealistic_dual_prompt.md`](./examples/04_expert_photorealistic_dual_prompt.md)** | Expert | Photorealistic templates combining `-` negative extraction and `$negative`. |
-| **[`05_mute_and_solo_indepth.md`](./examples/05_mute_and_solo_indepth.md)** | In-Depth Guide | Multi-Mute (`//`) and Multi-Solo (`!`) tag isolation workflows. |
-| **[`06_nested_wildcards_indepth.md`](./examples/06_nested_wildcards_indepth.md)** | In-Depth Guide | 2-Level and 3-Level wildcard nesting with combined probability calculations. |
+| **[`05_mute_and_solo_indepth.md`](./examples/05_mute_and_solo_indepth.md)** | In-Depth Guide | Tag-level and group-level Mute (`//`) & Solo (`!`) isolation workflows. |
+| **[`06_nested_wildcards_indepth.md`](./examples/06_nested_wildcards_indepth.md)** | In-Depth Guide | 2-Level and 3-Level wildcard nesting in plain text and group contexts. |
 | **[`07_masterclass_character_generator.md`](./examples/07_masterclass_character_generator.md)** | Masterclass | Full production template for multi-ethnic, hyper-realistic character generation. |
 
 ---
