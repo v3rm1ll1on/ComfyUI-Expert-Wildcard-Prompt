@@ -1,12 +1,13 @@
 import re
 import random
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 
 
 class ASTNode:
-    def __init__(self, is_muted: bool = False, is_solo: bool = False, prefix_separator: str = ""):
+    def __init__(self, is_muted: bool = False, is_solo: bool = False, is_negative: bool = False, prefix_separator: str = ""):
         self.is_muted = is_muted
         self.is_solo = is_solo
+        self.is_negative = is_negative
         self.prefix_separator = prefix_separator
 
 
@@ -32,11 +33,12 @@ class ASTWildcard(ASTNode):
 
 
 class ASTGroup:
-    def __init__(self, name: str, nodes: List[ASTNode], is_muted: bool = False, is_solo: bool = False):
+    def __init__(self, name: str, nodes: List[ASTNode], is_muted: bool = False, is_solo: bool = False, is_negative: bool = False):
         self.name = name
         self.nodes = nodes
         self.is_muted = is_muted
         self.is_solo = is_solo
+        self.is_negative = is_negative
 
 
 def parse_sdxl_weight(text: str) -> Tuple[str, float]:
@@ -51,6 +53,35 @@ def format_sdxl_weight(text: str, weight: float) -> str:
         return text
     formatted_weight = f"{weight:.2f}".rstrip('0').rstrip('.')
     return f"({text}:{formatted_weight})"
+
+
+class SyntaxCheckResult:
+    def __init__(self, is_valid: bool, errors: List[str]):
+        self.is_valid = is_valid
+        self.errors = errors
+
+
+def check_prompt_syntax(text: str) -> SyntaxCheckResult:
+    errors = []
+    stack = []
+    
+    for idx, char in enumerate(text):
+        if char in "({[":
+            stack.append((char, idx))
+        elif char in ")}]":
+            expected = {"}": "{", ")": "(", "]": "["}[char]
+            if not stack:
+                errors.append(f"Unmatched closing bracket '{char}' at position {idx}")
+            elif stack[-1][0] != expected:
+                errors.append(f"Mismatched bracket '{char}' at position {idx}, expected closing for '{stack[-1][0]}' from position {stack[-1][1]}")
+                stack.pop()
+            else:
+                stack.pop()
+                
+    for char, idx in stack:
+        errors.append(f"Unclosed opening bracket '{char}' at position {idx}")
+        
+    return SyntaxCheckResult(is_valid=len(errors) == 0, errors=errors)
 
 
 class PromptParser:
@@ -114,6 +145,7 @@ class PromptParser:
 
         is_muted = False
         is_solo = False
+        is_negative = False
 
         if self.match("!"):
             is_solo = True
@@ -124,11 +156,16 @@ class PromptParser:
             is_muted = True
             self.skip_whitespace()
 
+        if self.match("-") and not (self.peek() and self.peek().isdigit()):
+            is_negative = True
+            self.skip_whitespace()
+
         if self.peek() == "{":
             wildcard = self.parse_wildcard()
             if wildcard:
                 wildcard.is_muted = is_muted
                 wildcard.is_solo = is_solo
+                wildcard.is_negative = is_negative
                 wildcard.prefix_separator = prefix_separator
                 return wildcard
 
@@ -164,6 +201,7 @@ class PromptParser:
             is_lora=is_lora,
             is_muted=is_muted,
             is_solo=is_solo,
+            is_negative=is_negative,
             prefix_separator=prefix_separator
         )
 
@@ -202,7 +240,7 @@ class PromptParser:
 
 
 def parse_prompt_to_ast(text: str) -> List[ASTGroup]:
-    group_regex = re.compile(r"(?:(!|\/\/_S_\s*|\/\/\s*))?\[GRP:([^\]]+)\]")
+    group_regex = re.compile(r"(?:(-|\/\/_S_\s*|\/\/\s*|!))?\[GRP:([^\]]+)\]")
     matches = list(group_regex.finditer(text))
     parsed_groups = []
     last_idx = 0
@@ -235,13 +273,17 @@ def parse_prompt_to_ast(text: str) -> List[ASTGroup]:
 
         is_solo = g["prefix"].startswith("!")
         is_muted = g["prefix"].startswith("//") and not g["prefix"].startswith("//_S_")
+        is_negative = g["prefix"].startswith("-")
 
-        groups.append(ASTGroup(name=g["name"], nodes=nodes, is_muted=is_muted, is_solo=is_solo))
+        groups.append(ASTGroup(name=g["name"], nodes=nodes, is_muted=is_muted, is_solo=is_solo, is_negative=is_negative))
 
     return groups
 
 
-def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> str:
+def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[str, str]:
+    """
+    Löst AST auf und liefert ein Tupel (positive_prompt, negative_prompt).
+    """
     has_solo = any(
         g.is_solo or any(n.is_solo for n in g.nodes)
         for g in groups
@@ -254,7 +296,8 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> str:
             return node.is_solo or group_is_solo
         return True
 
-    resolved_tags = []
+    resolved_positive = []
+    resolved_negative = []
 
     for group in groups:
         if group.is_muted and not (has_solo and group.is_solo):
@@ -264,37 +307,48 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> str:
             if not is_node_active(node, group.is_solo, group.is_muted):
                 continue
 
-            resolved_tags.extend(resolve_node(node, group.is_solo, group.is_muted, rng, has_solo))
+            pos_tags, neg_tags = resolve_node(node, group.is_solo, group.is_muted, group.is_negative, rng, has_solo)
+            resolved_positive.extend(pos_tags)
+            resolved_negative.extend(neg_tags)
 
-    return ", ".join(filter(None, resolved_tags))
+    pos_str = ", ".join(filter(None, resolved_positive))
+    neg_str = ", ".join(filter(None, resolved_negative))
+    return pos_str, neg_str
 
 
-def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, rng: random.Random, has_solo: bool) -> List[str]:
+def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_negative: bool, rng: random.Random, has_solo: bool) -> Tuple[List[str], List[str]]:
+    is_neg = node.is_negative or parent_negative
+
     if isinstance(node, ASTTag):
-        if node.is_lora:
-            return [node.text]
-        return [format_sdxl_weight(node.text, node.weight)]
+        text = node.text if node.is_lora else format_sdxl_weight(node.text, node.weight)
+        if is_neg:
+            return [], [text]
+        else:
+            return [text], []
 
     elif isinstance(node, ASTWildcard):
         if node.skip_chance is not None:
             roll = rng.uniform(0, 100)
             if roll < node.skip_chance:
-                return []
+                return [], []
 
         if not node.options:
-            return []
+            return [], []
 
         weights = [opt.prob_weight if opt.prob_weight is not None else 1.0 for opt in node.options]
         chosen_option = rng.choices(node.options, weights=weights, k=1)[0]
 
-        sub_tags = []
+        sub_pos = []
+        sub_neg = []
         for child in chosen_option.nodes:
             if child.is_muted:
                 continue
             if has_solo and not (child.is_solo or parent_solo or node.is_solo):
                 continue
-            sub_tags.extend(resolve_node(child, parent_solo or node.is_solo, parent_muted, rng, has_solo))
+            pos_tags, neg_tags = resolve_node(child, parent_solo or node.is_solo, parent_muted, is_neg, rng, has_solo)
+            sub_pos.extend(pos_tags)
+            sub_neg.extend(neg_tags)
 
-        return sub_tags
+        return sub_pos, sub_neg
 
-    return []
+    return [], []
