@@ -47,6 +47,26 @@ Restart ComfyUI afterward.
 
 ---
 
+## Full Syntax Reference (Cheat Sheet)
+
+| Feature | Syntax Example | Description |
+| :--- | :--- | :--- |
+| **Basic Wildcard** | `{red \| blue \| green}` | Pick one option randomly with equal chance. |
+| **Weighted Wildcard** | `{70% blue \| 20% green \| 10% red}` | Assign custom percentage probabilities per option. |
+| **Skip Chance (Optional)** | `{20%? sunglasses}` | 20% chance to omit tag completely (80% chance to include). |
+| **Number Range** | `{18-50}` | Random integer between min (18) and max (50). |
+| **Number Range with Step** | `{1980-2020:5}` | Pick random integer with step (`1980, 1985, ..., 2020`). |
+| **Nested Wildcards** | `{60% female, {70% armor \| 30% suit} \| 40% male}` | Multi-level wildcard nesting with combined probabilities. |
+| **Inline Mute Tag** | `// leather jacket` | Temporarily deactivates tag without deleting it. |
+| **Inline Solo Tag** | `! red dress` | Isolates marked tags. Non-solo tags are ignored. |
+| **Prompt Group** | `[GRP:NAME], tag1, tag2` | Groups tags into a structured, manageable block. |
+| **Mute / Solo Group** | `//[GRP:NAME]` or `![GRP:NAME]` | Mutes (`//`) or Solos (`!`) an entire named group. |
+| **Inline Negative Extraction** | `-sunglasses` | Automatically extracts tag to negative output (removes from positive). |
+| **Negative Placeholder** | `$negative` | Specifies exact insertion point for `-` tags in `negative_prompt`. |
+| **SDXL Weights & LoRAs** | `(masterpiece:1.2)`, `<lora:name:1.0>` | Preserves weight syntax and LoRA tags natively. |
+
+---
+
 ## Usage Examples & Templates
 
 We provide a dedicated [`examples/`](./examples) directory with detailed Markdown templates ordered from beginner to masterclass:
