@@ -3,33 +3,81 @@ import random
 from prompt_parser import parse_prompt_to_ast, resolve_ast_to_prompt, combine_negative_prompts, check_prompt_syntax
 
 class TestPromptParser(unittest.TestCase):
+
     def test_prose_wildcard_spacing(self):
+        """Test plain text with wildcards retains exact spacing without unwanted commas."""
         text = "a photo of a {cat | dog | fox} sitting on a bench"
         ast = parse_prompt_to_ast(text)
         pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
         self.assertEqual(pos, "a photo of a dog sitting on a bench")
-
-    def test_wildcards_and_percentages(self):
-        text = "{100% blue shirt | 0% red shirt}"
-        ast = parse_prompt_to_ast(text)
-        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
-        self.assertEqual(pos, "blue shirt")
         self.assertEqual(neg, "")
 
-    def test_negative_prefix_extraction(self):
-        text = "masterpiece, -blurry, -bad hands, leather jacket"
+    def test_comma_separated_tags_spacing(self):
+        """Test tag lists retain comma separation."""
+        text = "masterpiece, 8k, {70% blue eyes | 30% green eyes}, leather jacket"
         ast = parse_prompt_to_ast(text)
         pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
-        self.assertEqual(pos, "masterpiece, leather jacket")
-        self.assertEqual(neg, "blurry, bad hands")
+        self.assertEqual(pos, "masterpiece, 8k, blue eyes, leather jacket")
+        self.assertEqual(neg, "")
+
+    def test_nested_wildcards_with_percentages(self):
+        """Test nested wildcards with probabilities resolve recursively."""
+        text = "a {100% female warrior with {100% knight armor | 0% cyber suit} | 0% rogue}"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "a female warrior with knight armor")
+        self.assertEqual(neg, "")
+
+    def test_skip_chance_in_wildcards(self):
+        """Test {X%? tag} skip chance functionality."""
+        text = "portrait of a woman, {100%? glowing neon face tattoos}"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "portrait of a woman")
+
+        text_include = "portrait of a woman, {0%? glowing neon face tattoos}"
+        ast_inc = parse_prompt_to_ast(text_include)
+        pos_inc, _ = resolve_ast_to_prompt(ast_inc, random.Random(42))
+        self.assertEqual(pos_inc, "portrait of a woman, glowing neon face tattoos")
+
+    def test_mute_and_solo_controls(self):
+        """Test inline mute (//) and solo (!) controls."""
+        # Mute test
+        text_mute = "masterpiece, // ruined background, leather jacket, // blurry lines"
+        ast_mute = parse_prompt_to_ast(text_mute)
+        pos_mute, _ = resolve_ast_to_prompt(ast_mute, random.Random(42))
+        self.assertEqual(pos_mute, "masterpiece, leather jacket")
+
+        # Multiple solo test
+        text_solo = "! red dress, blue shoes, ! golden necklace"
+        ast_solo = parse_prompt_to_ast(text_solo)
+        pos_solo, _ = resolve_ast_to_prompt(ast_solo, random.Random(42))
+        self.assertEqual(pos_solo, "red dress, golden necklace")
+
+    def test_prompt_grouping(self):
+        """Test [GRP:NAME] grouping with mute and solo on groups."""
+        text_grp = "[GRP:QUALITY], masterpiece, 8k, //[GRP:BACKGROUND], city skyline, [GRP:CHAR], girl"
+        ast_grp = parse_prompt_to_ast(text_grp)
+        pos_grp, _ = resolve_ast_to_prompt(ast_grp, random.Random(42))
+        self.assertEqual(pos_grp, "masterpiece, 8k, girl")
+
+    def test_inline_negative_prefix_extraction(self):
+        """Test '-' prefix extraction within wildcards and normal tags."""
+        text = "masterpiece, {100% sunny day, -sunglasses | 0% rainy day, -umbrella}, leather jacket"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "masterpiece, sunny day, leather jacket")
+        self.assertEqual(neg, "sunglasses")
 
     def test_negative_placeholder_injection(self):
-        extracted = "umbrella, coat"
+        """Test $negative placeholder injection in negative prompt template."""
+        extracted = "sunglasses, umbrella"
         base_neg = "(3d render:1.3), $negative, (deformed hands:1.2)"
         res = combine_negative_prompts(extracted, base_neg, "auto (use $negative)", random.Random(42))
-        self.assertEqual(res, "(3d render:1.3), umbrella, coat, (deformed hands:1.2)")
+        self.assertEqual(res, "(3d render:1.3), sunglasses, umbrella, (deformed hands:1.2)")
 
     def test_negative_modes_without_placeholder(self):
+        """Test prepend, append, and replace negative modes."""
         extracted = "umbrella, coat"
         base_neg = "3d render, cgi"
 
@@ -42,7 +90,15 @@ class TestPromptParser(unittest.TestCase):
         res_replace = combine_negative_prompts(extracted, base_neg, "replace", random.Random(42))
         self.assertEqual(res_replace, "umbrella, coat")
 
-    def test_syntax_check(self):
+    def test_sdxl_weight_and_lora_preservation(self):
+        """Test SDXL weights (tag:1.2) and <lora:name:1.0> remain intact."""
+        text = "masterpiece, (leather jacket:1.2), <lora:cyberpunk_v1:0.8>"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "masterpiece, (leather jacket:1.2), <lora:cyberpunk_v1:0.8>")
+
+    def test_syntax_checker(self):
+        """Test syntax check for matched/unmatched brackets."""
         res1 = check_prompt_syntax("valid {wildcard | option}")
         self.assertTrue(res1.is_valid)
 
