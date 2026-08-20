@@ -21,6 +21,7 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
   - `prepend`: Places extracted negative tags at the very start.
   - `append`: Appends extracted negative tags at the very end.
   - `replace`: Overwrites the negative prompt field completely.
+- **Number Range Wildcards (`{MIN-MAX:STEP}`)**: `{18-50}` randomly selects a number in range. Supports optional steps like `{0-10:2}` (chooses from `0, 2, 4, 6, 8, 10`).
 - **SDXL Weights & LoRAs**: Native preservation of `(tag:1.2)` weights and `<lora:name:1.0>` tags.
 - **Deterministic Seed**: Reproducible wildcard resolution based on input seed.
 
@@ -83,7 +84,14 @@ portrait of a woman, {20%? glowing neon face tattoos}
 ```
 *(20% chance to omit the tag entirely, 80% chance to include it).*
 
-### 4. Mute & Solo Controls (`//` & `!`)
+### 4. Number Range Wildcards (`{MIN-MAX:STEP}`)
+Generate random numeric values across a range with optional step increments:
+```text
+a photo of a {18-50} yo woman born in {1980-2020:5}
+```
+*(Chooses an age between 18 and 50, and a year from `[1980, 1985, 1990, ..., 2020]`).*
+
+### 5. Mute & Solo Controls (`//` & `!`)
 Temporarily disable or isolate tags without editing your prompt text:
 - **Mute (`//`)**: Deactivates specific tags (supports multiple `//` in one prompt):
   ```text

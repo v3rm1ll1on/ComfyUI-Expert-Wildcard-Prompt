@@ -21,6 +21,22 @@ Demonstrates prompt organization using groups `[GRP:NAME]`, percentage weighting
 
 ---
 
+### Example 2: Character Portrait with Number Range Wildcards ({MIN-MAX:STEP})
+
+**Positive Prompt**
+```text
+[GRP:STYLE], RAW photo, 8k resolution, photorealistic,
+[GRP:SUBJECT], portrait of a {18-50} yo woman born in {1970-2010:5}, {70% blue eyes | 30% hazel eyes},
+[GRP:SETTINGS], camera height {1-3} meters, ISO {100-800:100}
+```
+
+**Negative Prompt**
+```text
+(3d render, cgi, illustration, plastic skin:1.3), (deformed hands:1.2), blur, watermark
+```
+
+---
+
 ### Example 2: Fantasy Castle Architecture with Skip Features
 
 **Positive Prompt**
