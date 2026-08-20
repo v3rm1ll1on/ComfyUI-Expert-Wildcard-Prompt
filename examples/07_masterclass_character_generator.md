@@ -24,7 +24,7 @@ The ultimate production-ready prompt template for hyper-realistic character gene
 
 [GRP:LIGHTING], {40% natural window light, soft side illumination | diffuse overcast daylight, soft contrast | warm low-sun golden hour light, soft rim lighting | gentle morning sun through glass},
 
-[GRP:QUALITY], 35mm photograph, photorealistic texture, organic film grain, subtle analog texture, 8k resolution
+[GRP:QUALITY], {60% raw 35mm photograph, authentic skin pores, organic fine film grain, natural light falloff, subtle analog texture, 8k resolution, -3d render, -cgi, -overprocessed | 30% Hasselblad medium format portrait, extreme micro-details, soft natural depth of field, pristine photorealistic quality, -plastic skin, -airwashed | 10% vintage Kodachrome film photo, subtle chromatic aberration, rich natural color science, muted film contrast, -digital painting}, -smooth skin, -heavy retouching, -plastic face
 ```
 
 ### Negative Prompt
