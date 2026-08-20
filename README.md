@@ -1,12 +1,17 @@
 # Expert Text Prompt for ComfyUI
 
-A lightweight, pure-Python ComfyUI custom node featuring AST-based prompt parsing, advanced wildcards, probabilistic weighting, skip chances, prompt grouping, dual positive/negative outputs, inline negative extraction (`-`), `$negative` placeholder injection, and inline Mute/Solo controls.
+A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wildcards, probabilistic weighting, skip chances, prompt grouping, dual positive/negative outputs, inline negative extraction (`-`), `$negative` placeholder injection, and inline Mute/Solo controls.
 
 ---
 
 ## Features
 
-- **Pure Python Implementation**: No fragile frontend JavaScript dependencies, maximum stability across all ComfyUI updates.
+- **Advanced Wildcards**: `{option1 | option2 | option3}` with full support for nested wildcards.
+- **Probabilistic Weighting**: `{70% blue eyes | 30% green eyes}`
+- **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely).
+- **Prompt Grouping**: `[GRP:NAME]` for organizing complex prompts. Groups can be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
+- **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them.
+- **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements.
 - **Dual Outputs (`positive` & `negative`)**: Generates both positive and negative strings from a unified node setup.
 - **Inline Negative Extraction (`-`)**: Prefix any tag or wildcard option with `-` (e.g., `-sunglasses`, `-umbrella`) to automatically route it into the `negative` output.
 - **`$negative` Placeholder Injection**: Insert `$negative` into your negative prompt field to specify the exact location where extracted `-` tags are injected.
@@ -15,12 +20,6 @@ A lightweight, pure-Python ComfyUI custom node featuring AST-based prompt parsin
   - `prepend`: Places extracted negative tags at the very start.
   - `append`: Appends extracted negative tags at the very end.
   - `replace`: Overwrites the negative prompt field completely.
-- **Advanced Wildcards**: `{option1 | option2 | option3}` with full support for nested wildcards.
-- **Probabilistic Weighting**: `{70% blue eyes | 30% green eyes}`
-- **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely).
-- **Prompt Grouping**: `[GRP:NAME]` for organizing complex prompts. Groups can be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
-- **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them.
-- **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements.
 - **SDXL Weights & LoRAs**: Full native support for `(tag:1.2)` and `<lora:name:1.0>`.
 - **Deterministic Seed**: Reproducible wildcard resolution based on input seed.
 
@@ -48,7 +47,39 @@ Restart ComfyUI afterward.
 
 ## Usage Examples
 
-### 1. Dual Prompts with Inline Negative (`-` & `$negative`)
+### 1. Weighted Probabilities & Nested Wildcards
+```text
+a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk rogue}
+```
+
+### 2. Skip Chance (Optional Tags)
+```text
+{20%? glowing neon face tattoos}
+```
+*(20% chance to omit the tag entirely, 80% chance to include it).*
+
+### 3. Mute & Solo Controls (`//` & `!`)
+
+- **Mute (`//`)**: Deactivates tags without removing them:
+  ```text
+  masterpiece, // ruined background, leather jacket
+  ```
+- **Solo (`!`)**: Deactivates all non-solo tags in the prompt:
+  ```text
+  red dress, blue shoes, ! golden necklace
+  ```
+  *(Output: `golden necklace`)*
+
+### 4. Grouping (`[GRP:NAME]`)
+```text
+[GRP:QUALITY], (masterpiece:1.2), ultra-detailed,
+
+[GRP:CHARACTER], cyberpunk girl, neon hair,
+
+//[GRP:BACKGROUND], city skyline at dusk
+```
+
+### 5. Dual Prompts with Inline Negative (`-` & `$negative`)
 
 **`positive_prompt`**:
 ```text
@@ -67,40 +98,6 @@ Restart ComfyUI afterward.
 - If `rainy day` is selected by the seed:
   - `positive`: `portrait of a young woman, rainy day, leather jacket`
   - `negative`: `(3d render, cgi, plastic skin:1.3), umbrella, (deformed hands:1.2), blurry`
-
----
-
-### 2. Weighted Probabilities & Nested Wildcards
-```text
-a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk rogue}
-```
-
-### 3. Skip Chance (Optional Tags)
-```text
-{20%? glowing neon face tattoos}
-```
-*(20% chance to omit the tag entirely, 80% chance to include it).*
-
-### 4. Mute & Solo Controls (`//` & `!`)
-
-- **Mute (`//`)**: Deactivates tags without removing them:
-  ```text
-  masterpiece, // ruined background, leather jacket
-  ```
-- **Solo (`!`)**: Deactivates all non-solo tags in the prompt:
-  ```text
-  red dress, blue shoes, ! golden necklace
-  ```
-  *(Output: `golden necklace`)*
-
-### 5. Grouping (`[GRP:NAME]`)
-```text
-[GRP:QUALITY], (masterpiece:1.2), ultra-detailed,
-
-[GRP:CHARACTER], cyberpunk girl, neon hair,
-
-//[GRP:BACKGROUND], city skyline at dusk
-```
 
 ---
 
