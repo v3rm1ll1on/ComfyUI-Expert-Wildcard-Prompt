@@ -1,71 +1,71 @@
-# Expert Text Prompt (ComfyUI Custom Node)
+# Expert Text Prompt for ComfyUI
 
-Ein leistungsstarker ComfyUI Text-Prompt Node mit AST-Parsing, erweiterten Wildcards, prozentualen Gewichtungen, Skip-Chancen, Gruppen und Mute/Solo-Steuerung.
-
----
-
-## 🚀 Features
-
-- 🎲 **Erweiterte Wildcards**: `{option1 | option2 | option3}`
-- 📊 **Prozentuale Wahrscheinlichkeiten**: `{70% blue eyes | 30% green eyes}`
-- ❓ **Skip-Chance (Optionale Tags)**: `{20%? optional sunglasses}` (wird zu 20% verworfen)
-- 📁 **Gruppierung**: `[GRP:NAME]` zur Strukturierung von Prompts
-- 🔇 **Mute-Funktion (`//`)**: Stummschalten von einzelnen Tags oder ganzen Gruppen
-- 🎯 **Solo-Funktion (`!`)**: Isolieren von spezifischen Tags/Gruppen (blendete alles andere aus)
-- ⚖️ **SDXL Gewichte & LoRAs**: Volle Unterstützung für `(tag:1.2)` und `<lora:name:1.0>`
-- 🔢 **Deterministic Seed**: Gleicher Seed = Exakt selbe Wildcard-Auswahl
+A powerful ComfyUI custom node with AST-based parsing, advanced wildcards, probabilistic weighting, skip chances, prompt grouping, and inline Mute/Solo controls.
 
 ---
 
-## 📦 Installation
+## Features
 
- Navigiere in deinen ComfyUI `custom_nodes` Ordner und klone dieses Repository:
+- Advanced Wildcards: `{option1 | option2 | option3}`
+- Probabilistic Weighting: `{70% blue eyes | 30% green eyes}`
+- Skip Chance (Optional Tags): `{20%? optional sunglasses}` (20% chance to skip the tag completely)
+- Prompt Grouping: `[GRP:NAME]` for clean prompt organization
+- Inline Mute (`//`): Disable specific tags or entire prompt groups without deleting them
+- Inline Solo (`!`): Isolate specific tags or groups, ignoring everything else in the prompt
+- SDXL Weights & LoRAs: Native support for `(tag:1.2)` and `<lora:name:1.0>`
+- Deterministic Seed: Reproducible wildcard selection based on input seed
+
+---
+
+## Installation
+
+Navigate to your ComfyUI `custom_nodes` directory and clone this repository:
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone git@github.com:v3rm1ll1on/comfyi_variable_prompt.git
+git clone https://github.com/v3rm1ll1on/comfyi_variable_prompt.git
 ```
 
-Starte ComfyUI danach neu.
+Restart ComfyUI afterward.
 
 ---
 
-## 🔍 In ComfyUI finden
+## Finding the Node in ComfyUI
 
-- **Node Name**: `Expert Text Prompt (Wildcards & AST)`
-- **Kategorie**: `prompt/expert`
+- Node Name: `Expert Text Prompt (Wildcards & AST)`
+- Category: `prompt/expert`
 
 ---
 
-## 📖 Syntax & Beispiele
+## Syntax & Examples
 
-### 1. Wildcards mit Prozenten & Gewichtung
-Definiere Wahrscheinlichkeiten für jede Option:
+### 1. Wildcards with Weighted Probabilities
+Specify explicit chances for each option:
 ```text
 a {70% cyberpunk female hacker | 30% futuristic street runner}
 ```
 
-### 2. Skip-Chance (Optionale Tags)
-Füge ein `X%?` am Anfang der Wildcard-Klammer ein, um festzulegen, wie wahrscheinlich das Tag **übersprungen** wird:
+### 2. Skip Chance (Optional Tags)
+Prepend `X%?` inside a wildcard block to specify the probability that the enclosed tags will be skipped:
 ```text
 {20%? glowing neon face tattoos}
 ```
-*(Zu 20% wird kein Tattoo generiert, zu 80% wird das Tag eingesetzt).*
+*(20% chance to omit the tag entirely, 80% chance to include it).*
 
-### 3. Mute & Solo Modus (`//` & `!`)
+### 3. Mute & Solo Controls (`//` & `!`)
 
-- **Mute (`//`)**: Deaktiviert ein Tag oder eine Gruppe:
+- Mute (`//`): Disables a tag or group without removing it from your text:
   ```text
   masterpiece, // ruined background, leather jacket
   ```
-- **Solo (`!`)**: Deaktiviert alle anderen Tags im Prompt und fokussiert sich nur auf das Solo-Tag:
+- Solo (`!`): Temporarily ignores all non-solo tags in the prompt and focuses strictly on the solo tag:
   ```text
   red dress, blue shoes, ! golden necklace
   ```
-  *(Ergebnis: `golden necklace`)*
+  *(Resulting output: `golden necklace`)*
 
-### 4. Gruppen (`[GRP:NAME]`)
-Organisiere deinen Prompt übersichtlich. Gruppen können auch gemutet oder gesoloed werden:
+### 4. Grouping (`[GRP:NAME]`)
+Structure your prompts into logical blocks. Groups can also be muted or set to solo:
 ```text
 [GRP:QUALITY], (masterpiece:1.2), ultra-detailed,
 
@@ -76,7 +76,7 @@ Organisiere deinen Prompt übersichtlich. Gruppen können auch gemutet oder geso
 
 ---
 
-## 💡 Komplexer Beispiel-Prompt
+## Complex Prompt Example
 
 ```text
 [GRP:QUALITY], (masterpiece:1.2), (best quality:1.2), ultra-detailed, 8k resolution, photorealistic, <lora:cyberpunk_style_v1:0.8>,
@@ -90,7 +90,13 @@ Organisiere deinen Prompt übersichtlich. Gruppen können auch gemutet oder geso
 
 ---
 
-## ⚙️ Parameter
+## Node Parameters
 
-- **`text`**: Dein Prompt mit der erweiterten Syntax.
-- **`seed`**: Steuert den Zufallsgenerator für Wildcards. Gleicher Seed = Gleicher generierter Text.
+- `text`: Your prompt string leveraging the extended syntax.
+- `seed`: Controls the random number generator for wildcard resolutions. Using the same seed guarantees identical wildcard selections.
+
+---
+
+## License
+
+MIT
