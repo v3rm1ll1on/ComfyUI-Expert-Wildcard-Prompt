@@ -1,0 +1,17 @@
+[project]
+name = "comfyi_variable_prompt"
+version = "1.0.0"
+description = "Advanced prompt parsing node for ComfyUI featuring AST-based wildcards, probabilistic weighting, skip chances, prompt grouping, and inline Mute/Solo controls."
+authors = [
+    { name = "v3rm1ll1on" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+
+[project.urls]
+Repository = "https://github.com/v3rm1ll1on/comfyi_variable_prompt"
+
+[tool.comfy]
+PublisherId = "v3rm1ll1on"
+DisplayName = "Expert Text Prompt (Wildcards & AST)"
+Icon = ""

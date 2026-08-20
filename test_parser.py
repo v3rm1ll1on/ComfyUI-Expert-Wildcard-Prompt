@@ -27,5 +27,12 @@ class TestPromptParser(unittest.TestCase):
         prompt = resolve_ast_to_prompt(ast, random.Random(42))
         self.assertEqual(prompt, "(masterpiece:1.2), normal tag")
 
+    def test_nested_wildcards(self):
+        text = "{100% {100% inner_tag | 0% ignored} | 0% outer_ignored}"
+        ast = parse_prompt_to_ast(text)
+        prompt = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(prompt, "inner_tag")
+
+
 if __name__ == '__main__':
     unittest.main()
