@@ -7,7 +7,8 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
 ## Features
 
 - **Advanced Wildcards**: `{option1 | option2 | option3}` with full support for nested wildcards.
-- **Probabilistic Weighting**: `{70% blue eyes | 30% green eyes}`
+  - **Equal Weights**: `{red | blue | green}` assigns equal selection probability (`1.0`) to each option.
+  - **Relative Weighting**: `{70% blue | 30% green}` or `{5% red | blue | green}` (unweighted options default to weight `1.0`, while `5%` sets a relative weight multiplier of `5.0`).
 - **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely).
 - **Prompt Grouping**: `[GRP:NAME]` for organizing complex prompts. Groups can be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
 - **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them.
@@ -20,7 +21,7 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
   - `prepend`: Places extracted negative tags at the very start.
   - `append`: Appends extracted negative tags at the very end.
   - `replace`: Overwrites the negative prompt field completely.
-- **SDXL Weights & LoRAs**: Full native support for `(tag:1.2)` and `<lora:name:1.0>`.
+- **SDXL Weights & LoRAs**: Native preservation of `(tag:1.2)` weights and `<lora:name:1.0>` tags.
 - **Deterministic Seed**: Reproducible wildcard resolution based on input seed.
 
 ---
@@ -52,13 +53,19 @@ Restart ComfyUI afterward.
 a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk rogue}
 ```
 
-### 2. Skip Chance (Optional Tags)
+### 2. Equal vs. Relative Weights
+```text
+{5% rare red hair | blonde hair | brown hair | black hair}
+```
+*(Red hair is 5x more likely to be selected than any individual default hair color).*
+
+### 3. Skip Chance (Optional Tags)
 ```text
 {20%? glowing neon face tattoos}
 ```
 *(20% chance to omit the tag entirely, 80% chance to include it).*
 
-### 3. Mute & Solo Controls (`//` & `!`)
+### 4. Mute & Solo Controls (`//` & `!`)
 
 - **Mute (`//`)**: Deactivates tags without removing them:
   ```text
@@ -70,7 +77,7 @@ a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk r
   ```
   *(Output: `golden necklace`)*
 
-### 4. Grouping (`[GRP:NAME]`)
+### 5. Grouping (`[GRP:NAME]`)
 ```text
 [GRP:QUALITY], (masterpiece:1.2), ultra-detailed,
 
@@ -79,7 +86,7 @@ a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk r
 //[GRP:BACKGROUND], city skyline at dusk
 ```
 
-### 5. Dual Prompts with Inline Negative (`-` & `$negative`)
+### 6. Dual Prompts with Inline Negative (`-` & `$negative`)
 
 **`positive_prompt`**:
 ```text
