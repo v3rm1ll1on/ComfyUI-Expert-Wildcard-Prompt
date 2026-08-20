@@ -7,8 +7,8 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
 ## Features
 
 - **Advanced Wildcards**: `{option1 | option2 | option3}` with full support for nested wildcards.
-  - **Equal Weights**: `{red | blue | green}` assigns equal selection probability (`1.0`) to each option.
-  - **Relative Weighting**: `{70% blue | 30% green}` or `{5% red | blue | green}` (unweighted options default to weight `1.0`, while `5%` sets a relative weight multiplier of `5.0`).
+  - **Equal Chances**: `{red | blue | green}` assigns an equal chance to each option.
+  - **Weighted Chances**: `{70% blue | 30% green}` sets explicit relative probabilities.
 - **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely).
 - **Prompt Grouping**: `[GRP:NAME]` for organizing complex prompts. Groups can be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
 - **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them. Multiple `//` tags can be used simultaneously.
@@ -49,17 +49,16 @@ Restart ComfyUI afterward.
 ## Usage Examples (From Basic to Expert)
 
 ### 1. Basic Wildcards
-Randomly choose between simple options:
+Randomly choose between simple options with equal probability:
 ```text
 a photo of a {cat | dog | fox} sitting on a bench
 ```
 
-### 2. Equal vs. Relative Weights
-Control the likelihood of specific choices:
+### 2. Weighted Chances
+Explicitly set selection probabilities for each option:
 ```text
-{5% rare red hair | blonde hair | brown hair | black hair}
+a photo of a girl with {70% blue eyes | 20% green eyes | 10% brown eyes}
 ```
-*(Red hair is 5x more likely to be selected than any individual default hair color).*
 
 ### 3. Skip Chance (Optional Tags)
 Add optional elements with a percentage chance of skipping:
