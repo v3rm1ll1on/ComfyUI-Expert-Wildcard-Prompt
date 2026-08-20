@@ -60,6 +60,12 @@ class TestPromptParser(unittest.TestCase):
         pos_solo, _ = resolve_ast_to_prompt(ast_solo, random.Random(42))
         self.assertEqual(pos_solo, "red dress, golden necklace")
 
+        # Test solo inheritance across space-connected wildcards in the same phrase
+        text_phrase = "! cinematic portrait of a {100% female hacker | 0% runner}, standing in street"
+        ast_phrase = parse_prompt_to_ast(text_phrase)
+        pos_phrase, _ = resolve_ast_to_prompt(ast_phrase, random.Random(42))
+        self.assertEqual(pos_phrase, "cinematic portrait of a female hacker")
+
     def test_prompt_grouping(self):
         """Test [GRP:NAME] grouping with mute and solo on groups."""
         text_grp = "[GRP:QUALITY], masterpiece, 8k, //[GRP:BACKGROUND], city skyline, [GRP:CHAR], girl"

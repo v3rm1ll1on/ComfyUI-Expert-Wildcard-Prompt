@@ -109,6 +109,9 @@ class PromptParser:
         nodes = []
         self.skip_whitespace()
         last_char = ""
+        inherited_solo = False
+        inherited_muted = False
+        inherited_negative = False
 
         while self.pos < len(self.input):
             should_stop = any(self.input.startswith(tok, self.pos) for tok in stop_tokens)
@@ -117,18 +120,27 @@ class PromptParser:
 
             if self.match(","):
                 last_char = ","
+                inherited_solo = False
+                inherited_muted = False
+                inherited_negative = False
                 self.skip_whitespace()
                 continue
 
-            node = self.parse_node(last_char)
+            node = self.parse_node(last_char, inherited_solo, inherited_muted, inherited_negative)
             if node:
                 nodes.append(node)
+                inherited_solo = node.is_solo
+                inherited_muted = node.is_muted
+                inherited_negative = node.is_negative
 
             prev_pos = self.pos
             self.skip_whitespace()
 
             if self.match(","):
                 last_char = ","
+                inherited_solo = False
+                inherited_muted = False
+                inherited_negative = False
                 self.skip_whitespace()
             else:
                 was_whitespace = prev_pos > 0 and self.input[prev_pos - 1].isspace()
@@ -136,16 +148,16 @@ class PromptParser:
 
         return nodes
 
-    def parse_node(self, last_char: str = "") -> Optional[ASTNode]:
+    def parse_node(self, last_char: str = "", inherited_solo: bool = False, inherited_muted: bool = False, inherited_negative: bool = False) -> Optional[ASTNode]:
         prefix_separator = last_char if last_char in " \t\n\r," else ""
         self.skip_whitespace()
 
         if self.pos >= len(self.input):
             return None
 
-        is_muted = False
-        is_solo = False
-        is_negative = False
+        is_muted = inherited_muted
+        is_solo = inherited_solo
+        is_negative = inherited_negative
 
         if self.match("!"):
             is_solo = True
