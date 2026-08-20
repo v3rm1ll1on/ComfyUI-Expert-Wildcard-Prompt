@@ -397,21 +397,28 @@ def combine_negative_prompts(extracted_neg: str, base_neg_input: str, mode: str,
     else:
         base_text = ""
 
+    def clean_commas(text: str) -> str:
+        text = re.sub(r"\s*,\s*,+", ",", text)
+        text = re.sub(r"\s*,\s*", ", ", text)
+        return text.strip(" ,")
+
     # Wenn der User explizit prepend, append oder replace wählt, $negative Platzhalter aus base_text entfernen
     if mode in ["prepend", "append", "replace"]:
-        base_text = re.sub(r"\$negative\b", "", base_text).strip(" ,")
+        base_text = clean_commas(re.sub(r"\$negative\b", "", base_text))
 
     if not extracted_neg:
-        return re.sub(r"\$negative\b", "", base_text).strip(" ,")
+        return clean_commas(re.sub(r"\$negative\b", "", base_text))
 
     # Mode Handling:
     if mode == "auto (use $negative)" or mode == "auto":
         if "$negative" in base_text:
-            return base_text.replace("$negative", extracted_neg)
-        return f"{extracted_neg}, {base_text}".strip(" ,")
+            res = base_text.replace("$negative", extracted_neg)
+            return clean_commas(res)
+        return clean_commas(f"{extracted_neg}, {base_text}")
     elif mode == "replace":
-        return extracted_neg
+        return clean_commas(extracted_neg)
     elif mode == "append":
-        return f"{base_text}, {extracted_neg}".strip(" ,")
+        return clean_commas(f"{base_text}, {extracted_neg}")
     else:  # prepend
-        return f"{extracted_neg}, {base_text}".strip(" ,")
+        return clean_commas(f"{extracted_neg}, {base_text}")
+
