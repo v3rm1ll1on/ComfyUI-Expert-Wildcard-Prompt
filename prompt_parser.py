@@ -33,11 +33,11 @@ class ASTWildcard(ASTNode):
 
 
 class ASTNumberRange(ASTNode):
-    def __init__(self, min_val: int, max_val: int, count: int = 1, skip_chance: Optional[float] = None, **kwargs):
+    def __init__(self, min_val: int, max_val: int, step: int = 1, skip_chance: Optional[float] = None, **kwargs):
         super().__init__(**kwargs)
         self.min_val = min_val
         self.max_val = max_val
-        self.count = count
+        self.step = max(1, step)
         self.skip_chance = skip_chance
 
 
@@ -243,9 +243,9 @@ class PromptParser:
         if range_match:
             min_v = int(range_match.group(1))
             max_v = int(range_match.group(2))
-            count_v = int(range_match.group(3)) if range_match.group(3) else 1
+            step_v = int(range_match.group(3)) if range_match.group(3) else 1
             self.pos += len(range_match.group(0))
-            return ASTNumberRange(min_val=min_v, max_val=max_v, count=count_v, skip_chance=skip_chance)
+            return ASTNumberRange(min_val=min_v, max_val=max_v, step=step_v, skip_chance=skip_chance)
 
         options = []
         while self.pos < len(self.input) and self.peek() != "}":
@@ -385,8 +385,9 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
             if roll < node.skip_chance:
                 return [], []
 
-        nums = [str(rng.randint(node.min_val, node.max_val)) for _ in range(node.count)]
-        text = " ".join(nums)
+        possible_values = list(range(node.min_val, node.max_val + 1, node.step))
+        chosen_val = rng.choice(possible_values) if possible_values else node.min_val
+        text = str(chosen_val)
 
         if is_neg:
             return [], [(text, sep)]
