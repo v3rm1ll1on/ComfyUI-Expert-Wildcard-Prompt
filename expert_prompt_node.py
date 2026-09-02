@@ -30,6 +30,7 @@ class ExpertTextPromptNode:
 
     RETURN_TYPES = ("STRING", "STRING", "INT")
     RETURN_NAMES = ("positive", "negative", "combinations")
+    OUTPUT_NODE = True
     FUNCTION = "process"
     CATEGORY = "prompt/expert"
 
