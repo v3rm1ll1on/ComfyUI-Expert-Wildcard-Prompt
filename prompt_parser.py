@@ -395,6 +395,12 @@ def build_text_with_separators(items: List[Tuple[str, str]]) -> str:
     result = re.sub(r"\s*,\s*", ", ", result)
     result = re.sub(r" +,", ",", result)
     result = re.sub(r" +", " ", result)
+
+    # Bereinigung von Whitespaces in Gewichtungsklammern wie ( text :1.2) -> (text:1.2)
+    result = re.sub(r"\(\s+", "(", result)
+    result = re.sub(r"\s+:\s*(\d)", r":\1", result)
+    result = re.sub(r"\s+\)", ")", result)
+
     return result.strip(" ,")
 
 
