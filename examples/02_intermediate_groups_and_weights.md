@@ -10,8 +10,14 @@ Customize selection odds and add optional elements without using groups:
 
 **Positive Prompt**
 ```text
-RAW photo of a young woman with {70% blue eyes | 20% green eyes | 10% brown eyes}, wearing a {60% leather jacket | 40% denim jacket}, {25%? glowing neon face tattoos}, photorealistic
+RAW photo of a young woman with {70% blue eyes | 20% green eyes | brown eyes}, wearing a {60% leather jacket | denim jacket}, {25%? glowing neon face tattoos}, photorealistic
 ```
+
+> [!NOTE]
+> **Smart Weight Balancing (Auto-Rest Distribution)**
+> You don't have to specify percentages for every single option!
+> - In `{70% blue eyes | 20% green eyes | brown eyes}`, explicit weights sum to **90%**. The unweighted option `brown eyes` automatically receives the remaining **10%**.
+> - In `{60% leather jacket | denim jacket}`, `denim jacket` automatically receives the remaining **40%**.
 
 **Negative Prompt**
 ```text

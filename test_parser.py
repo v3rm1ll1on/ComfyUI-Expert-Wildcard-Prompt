@@ -262,5 +262,50 @@ class TestPromptParser(unittest.TestCase):
         self.assertEqual(pos, "photo")
         self.assertEqual(neg, "3d render, 2D art")
 
+    def test_wildcard_leftover_and_overcommitment_distribution(self):
+        """Test partial percentage distribution and over-commitment normalization."""
+        text_partial = "{50% red | 30% green | black | white}"
+        ast_p = parse_prompt_to_ast(text_partial)
+        # Test statistical distribution across multiple random seeds
+        counts = {"red": 0, "green": 0, "black": 0, "white": 0}
+        for seed in range(1000):
+            pos, _ = resolve_ast_to_prompt(ast_p, random.Random(seed))
+            counts[pos] += 1
+        # red ~ 500 (50%), green ~ 300 (30%), black ~ 100 (10%), white ~ 100 (10%)
+        self.assertTrue(450 <= counts["red"] <= 550, f"red count {counts['red']} expected ~500")
+        self.assertTrue(250 <= counts["green"] <= 350, f"green count {counts['green']} expected ~300")
+        self.assertTrue(60 <= counts["black"] <= 140, f"black count {counts['black']} expected ~100")
+        self.assertTrue(60 <= counts["white"] <= 140, f"white count {counts['white']} expected ~100")
+
+    def test_overcommitted_wildcard_weights(self):
+        """Test over-committed percentage wildcards like {50% red | 30% green | black | 50% white}."""
+        text_over = "{50% red | 30% green | black | 50% white}"
+        ast_o = parse_prompt_to_ast(text_over)
+        counts = {"red": 0, "green": 0, "black": 0, "white": 0}
+        for seed in range(1000):
+            pos, _ = resolve_ast_to_prompt(ast_o, random.Random(seed))
+            counts[pos] += 1
+        # red ~ 323 (32.3%), green ~ 194 (19.4%), black ~ 161 (16.1%), white ~ 323 (32.3%)
+        self.assertTrue(250 <= counts["red"] <= 380, f"red count {counts['red']} expected ~323")
+        self.assertTrue(140 <= counts["green"] <= 250, f"green count {counts['green']} expected ~194")
+        self.assertTrue(120 <= counts["black"] <= 210, f"black count {counts['black']} expected ~161")
+        self.assertTrue(250 <= counts["white"] <= 380, f"white count {counts['white']} expected ~323")
+
+    def test_lora_syntax_check(self):
+        """Test syntax check for angle brackets in LoRA syntax."""
+        from prompt_parser import check_prompt_syntax
+        res_valid = check_prompt_syntax("<lora:my_lora:1.0>, 8k")
+        self.assertTrue(res_valid.is_valid)
+        res_invalid = check_prompt_syntax("<lora:my_lora:1.0, 8k")
+        self.assertFalse(res_invalid.is_valid)
+
+    def test_wildcard_negative_first_separator(self):
+        """Test that when a wildcard option starts with a negative tag, the separator goes to the first positive tag."""
+        text = "woman, {-sunglasses, coat}"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(1))
+        self.assertEqual(pos, "woman, coat")
+        self.assertEqual(neg, "sunglasses")
+
 if __name__ == '__main__':
     unittest.main()

@@ -91,11 +91,36 @@ Randomly choose between simple options with equal probability:
 a photo of a {cat | dog | fox} sitting on a bench
 ```
 
-### 2. Weighted Chances
-Explicitly set selection probabilities for each option:
+### 2. Weighted Chances & Smart Weight Balancing
+Explicitly set selection probabilities or mix weighted and unweighted options:
 ```text
 a photo of a girl with {70% blue eyes | 20% green eyes | 10% brown eyes}
 ```
+
+#### How Smart Weight Balancing Works:
+You don't need to manually calculate probabilities so everything sums to 100%. The node automatically balances weights intelligently:
+
+- **1. Automatic Leftover Distribution (Partial Weights)**
+  If you only weight *some* options, the remaining percentage is split equally among unweighted options:
+  ```text
+  {50% red | 30% green | black | white}
+  ```
+  - `red` (explicit): **50%**
+  - `green` (explicit): **30%**
+  - Explicit sum = 80%. Remaining budget = **20%**.
+  - `black` & `white` split leftover 20% equally $\rightarrow$ **10% each**.
+  - **Final Odds**: `red`: 50% | `green`: 30% | `black`: 10% | `white`: 10%.
+
+- **2. Over-Commitment Graceful Fallback (Sum > 100%)**
+  If your explicit weights exceed 100%:
+  ```text
+  {50% red | 30% green | black | 50% white}
+  ```
+  - Unweighted tags (`black`) automatically receive a baseline fair share ($100\% / N_{\text{total}} = 25\%$).
+  - Relative proportions are preserved smoothly without ignoring any option.
+
+- **3. Zero-Sum Safety Guard**
+  If all options are set to 0% (`{0% red | 0% green}`), the node automatically falls back to equal distribution (50%/50%) instead of crashing.
 
 ### 3. Skip Chance (Optional Tags)
 Add optional elements with a percentage chance of skipping:

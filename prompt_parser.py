@@ -75,10 +75,10 @@ def check_prompt_syntax(text: str) -> SyntaxCheckResult:
     stack = []
     
     for idx, char in enumerate(text):
-        if char in "({[":
+        if char in "({[<":
             stack.append((char, idx))
-        elif char in ")}]":
-            expected = {"}": "{", ")": "(", "]": "["}[char]
+        elif char in ")}]>":
+            expected = {"}": "{", ")": "(", "]": "[", ">": "<"}[char]
             if not stack:
                 errors.append(f"Unmatched closing bracket '{char}' at position {idx}")
             elif stack[-1][0] != expected:
@@ -121,6 +121,9 @@ class PromptParser:
         inherited_solo = False
         inherited_muted = False
         inherited_negative = False
+        grp_solo = False
+        grp_muted = False
+        grp_negative = False
 
         while self.pos < len(self.input):
             should_stop = any(self.input.startswith(tok, self.pos) for tok in stop_tokens)
@@ -129,9 +132,9 @@ class PromptParser:
 
             if self.match(","):
                 last_char = ","
-                inherited_solo = False
-                inherited_muted = False
-                inherited_negative = False
+                inherited_solo = grp_solo
+                inherited_muted = grp_muted
+                inherited_negative = grp_negative
                 self.skip_whitespace()
                 continue
 
@@ -141,19 +144,26 @@ class PromptParser:
                 inherited_solo = node.is_solo
                 inherited_muted = node.is_muted
                 inherited_negative = node.is_negative
+                if getattr(node, "is_grp_start", False):
+                    grp_solo = node.is_solo
+                    grp_muted = node.is_muted
+                    grp_negative = node.is_negative
 
             prev_pos = self.pos
             self.skip_whitespace()
 
             if self.match(","):
                 last_char = ","
-                inherited_solo = False
-                inherited_muted = False
-                inherited_negative = False
+                inherited_solo = grp_solo
+                inherited_muted = grp_muted
+                inherited_negative = grp_negative
                 self.skip_whitespace()
             else:
                 was_whitespace = prev_pos > 0 and self.input[prev_pos - 1].isspace()
                 last_char = " " if (self.pos > prev_pos or was_whitespace) else ""
+
+            if self.pos == prev_pos and not node:
+                self.advance()
 
         return nodes
 
@@ -184,6 +194,17 @@ class PromptParser:
             self.match("-")
             is_negative = True
             self.skip_whitespace()
+
+        # Check for inline group header inside wildcards/nodes and consume it cleanly
+        if self.input.startswith("[GRP:", self.pos):
+            grp_match = re.match(r"^\[GRP:[^\]]+\]\s*,?\s*", self.input[self.pos:])
+            if grp_match:
+                self.pos += len(grp_match.group(0))
+                self.skip_whitespace()
+                next_node = self.parse_node(prefix_separator, is_solo, is_muted, is_negative)
+                if next_node:
+                    next_node.is_grp_start = True
+                return next_node
 
         if self.peek() == "{":
             wildcard = self.parse_wildcard()
@@ -276,7 +297,14 @@ class PromptParser:
 
 def parse_prompt_to_ast(text: str) -> List[ASTGroup]:
     group_regex = re.compile(r"(?:(-|\/\/_S_\s*|\/\/\s*|!))?\[GRP:([^\]]+)\]")
-    matches = list(group_regex.finditer(text))
+    all_matches = list(group_regex.finditer(text))
+    matches = []
+    for m in all_matches:
+        prefix = text[:m.start()]
+        brace_depth = prefix.count("{") - prefix.count("}")
+        if brace_depth <= 0:
+            matches.append(m)
+
     parsed_groups = []
     last_idx = 0
 
@@ -407,11 +435,31 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
         if not node.options:
             return [], []
 
-        weights = [opt.prob_weight if opt.prob_weight is not None else 1.0 for opt in node.options]
-        chosen_option = rng.choices(node.options, weights=weights, k=1)[0]
+        options = node.options
+        num_opts = len(options)
+        explicit_weights = [opt.prob_weight for opt in options if opt.prob_weight is not None]
+        unweighted_count = sum(1 for opt in options if opt.prob_weight is None)
+        explicit_sum = sum(explicit_weights)
+
+        weights = []
+        if unweighted_count == 0:
+            weights = [opt.prob_weight for opt in options]
+        elif explicit_sum <= 100.0:
+            remaining = 100.0 - explicit_sum
+            share_per_unweighted = remaining / unweighted_count
+            weights = [opt.prob_weight if opt.prob_weight is not None else share_per_unweighted for opt in options]
+        else:
+            base_share = 100.0 / num_opts
+            weights = [opt.prob_weight if opt.prob_weight is not None else base_share for opt in options]
+
+        if sum(weights) <= 0:
+            weights = [1.0] * num_opts
+
+        chosen_option = rng.choices(options, weights=weights, k=1)[0]
 
         sub_pos = []
         sub_neg = []
+        first_pos = True
         for idx, child in enumerate(chosen_option.nodes):
             if child.is_muted:
                 continue
@@ -420,11 +468,10 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
 
             pos_tags, neg_tags = resolve_node(child, parent_solo or node.is_solo, parent_muted, is_neg, rng, has_solo)
             
-            # Für das erste Kind in einer Wildcard übernehmen wir den Separator der Wildcard selbst
-            if idx == 0 and pos_tags:
+            # Für das erste positive Kind in einer Wildcard übernehmen wir den Separator der Wildcard selbst
+            if first_pos and pos_tags:
                 pos_tags[0] = (pos_tags[0][0], sep)
-            if idx == 0 and neg_tags:
-                neg_tags[0] = (neg_tags[0][0], sep)
+                first_pos = False
 
             sub_pos.extend(pos_tags)
             sub_neg.extend(neg_tags)
