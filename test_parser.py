@@ -85,6 +85,15 @@ class TestPromptParser(unittest.TestCase):
         pos_solo, _ = resolve_ast_to_prompt(ast_solo, random.Random(42))
         self.assertEqual(pos_solo, "red dress, golden necklace")
 
+    def test_muted_wildcard_option_exclusion(self):
+        """Test fully muted wildcard options are excluded so remaining options divide the probability."""
+        text = "{red | // blue}"
+        ast = parse_prompt_to_ast(text)
+        # Check across 20 seeds that 'blue' is never selected and 'red' is selected 100% of the time
+        for seed in range(20):
+            pos, _ = resolve_ast_to_prompt(ast, random.Random(seed))
+            self.assertEqual(pos, "red")
+
     def test_solo_phrase_inheritance_across_spaces(self):
         """Test solo (!) inherits across space-connected wildcards in a phrase, ending at comma."""
         text = "[GRP:STYLE], RAW photo, [GRP:SUBJ], ! cinematic portrait of a {100% female hacker | 0% runner}, standing in street"
@@ -503,6 +512,49 @@ upper body, solid background, futuristic look, sci-fi, soft light, soft shadows"
         )
         self.assertLessEqual(combos, 0x7fffffffffffffff)
         self.assertIn("Combinations:", debug_info)
+
+    def test_muted_option_in_weighted_wildcard(self):
+        """Test weighted wildcard excludes muted options and rescales active options."""
+        text = "{ 70% option A | // 30% option B }"
+        ast = parse_prompt_to_ast(text)
+        for seed in range(20):
+            pos, _ = resolve_ast_to_prompt(ast, random.Random(seed))
+            self.assertEqual(pos, "option A")
+
+    def test_all_muted_options_in_wildcard(self):
+        """Test wildcard where all options are muted returns empty string gracefully."""
+        text = "header tag, { // option A | // option B }, footer tag"
+        ast = parse_prompt_to_ast(text)
+        pos, _ = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "header tag, footer tag")
+
+    def test_partially_muted_option_in_wildcard(self):
+        """Test wildcard option containing a mix of muted and active tags remains selectable."""
+        text = "{ option A, // muted_tag | option B }"
+        ast = parse_prompt_to_ast(text)
+        results = set()
+        for seed in range(20):
+            pos, _ = resolve_ast_to_prompt(ast, random.Random(seed))
+            results.add(pos)
+        self.assertEqual(results, {"option A", "option B"})
+
+    def test_group_muted_inside_wildcard_option(self):
+        """Test group header with // inside a wildcard option mutes that option completely."""
+        text = "{ //[GRP:FOO] option A, subtag | option B }"
+        ast = parse_prompt_to_ast(text)
+        for seed in range(20):
+            pos, _ = resolve_ast_to_prompt(ast, random.Random(seed))
+            self.assertEqual(pos, "option B")
+
+    def test_user_exact_example_no_empty_string(self):
+        """Test {optionA | // optionB, optionC} produces only optionA and optionC, never empty string."""
+        text = "{optionA | // optionB, optionC}"
+        ast = parse_prompt_to_ast(text)
+        results = set()
+        for seed in range(1000):
+            pos, _ = resolve_ast_to_prompt(ast, random.Random(seed))
+            results.add(pos)
+        self.assertEqual(results, {"optionA", "optionC"})
 
 if __name__ == '__main__':
     unittest.main()

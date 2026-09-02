@@ -398,17 +398,29 @@ def build_text_with_separators(items: List[Tuple[str, str]]) -> str:
     return result.strip(" ,")
 
 
+def check_nodes_has_solo(nodes: List[ASTNode]) -> bool:
+    for n in nodes:
+        if getattr(n, "is_muted", False):
+            continue
+        if getattr(n, "is_solo", False):
+            return True
+        if isinstance(n, ASTWildcard):
+            if any(check_nodes_has_solo(opt.nodes) for opt in n.options):
+                return True
+    return False
+
+
 def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[str, str]:
     has_solo = any(
-        g.is_solo or any(n.is_solo for n in g.nodes)
-        for g in groups
+        g.is_solo or check_nodes_has_solo(g.nodes)
+        for g in groups if not g.is_muted
     )
 
     def is_node_active(node: ASTNode, group_is_solo: bool, group_is_muted: bool) -> bool:
         if group_is_muted or node.is_muted:
             return False
         if has_solo:
-            return node.is_solo or group_is_solo
+            return node.is_solo or group_is_solo or (isinstance(node, ASTWildcard) and check_nodes_has_solo([node]))
         return True
 
     resolved_positive: List[Tuple[str, str]] = []
@@ -466,7 +478,21 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
         if not node.options:
             return [], []
 
-        options = node.options
+        def is_option_active(opt: ASTWildcardOption) -> bool:
+            if not opt.nodes:
+                return True
+            if all(getattr(n, "is_muted", False) for n in opt.nodes):
+                return False
+            if has_solo and not (parent_solo or node.is_solo):
+                if not check_nodes_has_solo(opt.nodes):
+                    return False
+            return True
+
+        active_options = [opt for opt in node.options if is_option_active(opt)]
+        if not active_options:
+            return [], []
+
+        options = active_options
         num_opts = len(options)
         explicit_weights = [opt.prob_weight for opt in options if opt.prob_weight is not None]
         unweighted_count = sum(1 for opt in options if opt.prob_weight is None)
