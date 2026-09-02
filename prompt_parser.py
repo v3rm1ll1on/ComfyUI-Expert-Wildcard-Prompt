@@ -70,6 +70,17 @@ class SyntaxCheckResult:
         self.errors = errors
 
 
+def get_syntax_snippet(text: str, idx: int, width: int = 20) -> str:
+    start = max(0, idx - width)
+    end = min(len(text), idx + width + 1)
+    prefix = "..." if start > 0 else ""
+    suffix = "..." if end < len(text) else ""
+    snippet_str = text[start:end].replace("\n", " ")
+    pointer_pos = (idx - start) + len(prefix) + 1
+    pointer_line = " " * pointer_pos + "^"
+    return f'"{prefix}{snippet_str}{suffix}"\n   {pointer_line}'
+
+
 def check_prompt_syntax(text: str) -> SyntaxCheckResult:
     errors = []
     stack = []
@@ -80,15 +91,19 @@ def check_prompt_syntax(text: str) -> SyntaxCheckResult:
         elif char in ")}]>":
             expected = {"}": "{", ")": "(", "]": "[", ">": "<"}[char]
             if not stack:
-                errors.append(f"Unmatched closing bracket '{char}' at position {idx}")
+                snip = get_syntax_snippet(text, idx)
+                errors.append(f"Unmatched closing bracket '{char}' at position {idx}:\n   {snip}")
             elif stack[-1][0] != expected:
-                errors.append(f"Mismatched bracket '{char}' at position {idx}, expected closing for '{stack[-1][0]}' from position {stack[-1][1]}")
+                snip = get_syntax_snippet(text, idx)
+                open_char, open_idx = stack[-1]
+                errors.append(f"Mismatched bracket '{char}' at position {idx} (opened with '{open_char}' at position {open_idx}):\n   {snip}")
                 stack.pop()
             else:
                 stack.pop()
                 
     for char, idx in stack:
-        errors.append(f"Unclosed opening bracket '{char}' at position {idx}")
+        snip = get_syntax_snippet(text, idx)
+        errors.append(f"Unclosed opening bracket '{char}' at position {idx}:\n   {snip}")
         
     return SyntaxCheckResult(is_valid=len(errors) == 0, errors=errors)
 
@@ -525,6 +540,9 @@ def count_ast_combinations(ast: List[ASTGroup]) -> int:
     """
     Calculates the total number of unique prompt variations possible from the given AST.
     """
+    if not any(g.nodes for g in ast if not g.is_muted):
+        return 0
+
     def check_nodes_has_solo(nodes: List[ASTNode]) -> bool:
         for n in nodes:
             if n.is_muted:

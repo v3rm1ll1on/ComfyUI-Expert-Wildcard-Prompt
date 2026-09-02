@@ -1,6 +1,6 @@
 import unittest
 import random
-from prompt_parser import parse_prompt_to_ast, resolve_ast_to_prompt, combine_negative_prompts, check_prompt_syntax
+from prompt_parser import parse_prompt_to_ast, resolve_ast_to_prompt, combine_negative_prompts, check_prompt_syntax, count_ast_combinations
 
 class TestPromptParser(unittest.TestCase):
 
@@ -361,6 +361,7 @@ class TestPromptParser(unittest.TestCase):
             pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
             self.assertEqual(pos, "")
             self.assertEqual(neg, "")
+            self.assertEqual(count_ast_combinations(ast), 0)
 
             combined = combine_negative_prompts("", empty_text, "auto (use $negative)", random.Random(42))
             self.assertEqual(combined, "")
@@ -391,7 +392,7 @@ class TestPromptParser(unittest.TestCase):
         from expert_prompt_node import ExpertTextPromptNode
 
         node = ExpertTextPromptNode()
-        pos, neg, combos = node.process(
+        pos, neg, combos, debug_info = node.process(
             positive_prompt="warrior, {-shield | sword}",
             negative_prompt="blurry, $negative, deformed",
             negative_mode="auto (use $negative)",
@@ -404,19 +405,62 @@ class TestPromptParser(unittest.TestCase):
         self.assertEqual(combos, 2)
         self.assertIn("warrior", pos)
         self.assertIn("blurry", neg)
+        self.assertIn("[Syntax OK]", debug_info)
+        self.assertIn("Combinations: 2", debug_info)
 
     def test_comfyui_node_execution_with_negative_wildcards(self):
         """Test combinations multiply correctly when negative_prompt field also contains wildcards."""
         from expert_prompt_node import ExpertTextPromptNode
 
         node = ExpertTextPromptNode()
-        pos, neg, combos = node.process(
+        pos, neg, combos, debug_info = node.process(
             positive_prompt="hero {red | blue}",           # 2 pos combos
             negative_prompt="{deformed | blurry| mutated}", # 3 neg combos
             negative_mode="auto (use $negative)",
             seed=42
         )
         self.assertEqual(combos, 6)  # 2 * 3 = 6
+        self.assertIn("[Syntax OK]", debug_info)
+
+    def test_comfyui_node_execution_with_syntax_errors(self):
+        """Test debug_info pin outputs formatted syntax errors when syntax issues are present."""
+        from expert_prompt_node import ExpertTextPromptNode
+
+        node = ExpertTextPromptNode()
+        pos, neg, combos, debug_info = node.process(
+            positive_prompt="hero {red | blue armor",
+            negative_prompt="blurry",
+            negative_mode="auto (use $negative)",
+            seed=42
+        )
+        self.assertIn("[Positive Prompt Syntax Issues]:", debug_info)
+        self.assertIn("Unclosed opening bracket '{'", debug_info)
+
+    def test_empty_prompt_combinations_count(self):
+        """Test count_ast_combinations returns 0 for empty prompts."""
+        from prompt_parser import parse_prompt_to_ast, count_ast_combinations
+
+        ast_empty = parse_prompt_to_ast("")
+        self.assertEqual(count_ast_combinations(ast_empty), 0)
+
+        ast_whitespace = parse_prompt_to_ast("   ")
+        self.assertEqual(count_ast_combinations(ast_whitespace), 0)
+
+    def test_combinations_int_overflow_protection(self):
+        """Test combinations output pin caps giant integer values safely."""
+        from expert_prompt_node import ExpertTextPromptNode
+
+        node = ExpertTextPromptNode()
+        # Build prompt with massive combinations > 2**63
+        massive_prompt = "{1-1000} " * 10
+        pos, neg, combos, debug_info = node.process(
+            positive_prompt=massive_prompt,
+            negative_prompt="",
+            negative_mode="auto (use $negative)",
+            seed=42
+        )
+        self.assertLessEqual(combos, 0x7fffffffffffffff)
+        self.assertIn("Combinations:", debug_info)
 
 if __name__ == '__main__':
     unittest.main()

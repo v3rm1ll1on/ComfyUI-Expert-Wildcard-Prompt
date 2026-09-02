@@ -1,4 +1,8 @@
 import random
+import logging
+
+logger = logging.getLogger("ComfyUI-ExpertTextPrompt")
+
 try:
     from .prompt_parser import (
         parse_prompt_to_ast,
@@ -28,8 +32,8 @@ class ExpertTextPromptNode:
             }
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "INT")
-    RETURN_NAMES = ("positive", "negative", "combinations")
+    RETURN_TYPES = ("STRING", "STRING", "INT", "STRING")
+    RETURN_NAMES = ("positive", "negative", "combinations", "debug_info")
     FUNCTION = "process"
     CATEGORY = "prompt/expert"
 
@@ -38,10 +42,13 @@ class ExpertTextPromptNode:
         syntax_pos = check_prompt_syntax(positive_prompt)
         syntax_neg = check_prompt_syntax(negative_prompt)
         
+        debug_lines = []
         if not syntax_pos.is_valid:
-            print(f"[ExpertTextPrompt Warning] Positive prompt syntax issues:\n" + "\n".join(syntax_pos.errors))
+            logger.warning("Positive prompt syntax issues:\n%s", "\n".join(syntax_pos.errors))
+            debug_lines.append("[Positive Prompt Syntax Issues]:\n" + "\n".join(syntax_pos.errors))
         if not syntax_neg.is_valid:
-            print(f"[ExpertTextPrompt Warning] Negative prompt syntax issues:\n" + "\n".join(syntax_neg.errors))
+            logger.warning("Negative prompt syntax issues:\n%s", "\n".join(syntax_neg.errors))
+            debug_lines.append("[Negative Prompt Syntax Issues]:\n" + "\n".join(syntax_neg.errors))
 
         rng = random.Random(seed)
         
@@ -62,7 +69,15 @@ class ExpertTextPromptNode:
         neg_combos = count_ast_combinations(neg_ast) if neg_ast else 1
         total_combinations = pos_combos * max(neg_combos, 1)
 
-        return (final_positive, final_negative, total_combinations)
+        # Cap INT to max signed 64-bit int (0x7fffffffffffffff) to prevent PyTorch/C++/JS overflow
+        safe_combinations = min(total_combinations, 0x7fffffffffffffff)
+
+        if not debug_lines:
+            debug_info = f"[Syntax OK]\nCombinations: {total_combinations:,} (Pos: {pos_combos:,}, Neg: {neg_combos:,})"
+        else:
+            debug_info = "\n\n".join(debug_lines) + f"\n\nCombinations: {total_combinations:,}"
+
+        return (final_positive, final_negative, safe_combinations, debug_info)
 
 NODE_CLASS_MAPPINGS = {
     "ExpertTextPrompt": ExpertTextPromptNode
