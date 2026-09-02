@@ -4,14 +4,16 @@ try:
         parse_prompt_to_ast,
         resolve_ast_to_prompt,
         combine_negative_prompts,
-        check_prompt_syntax
+        check_prompt_syntax,
+        count_ast_combinations
     )
 except ImportError:
     from prompt_parser import (
         parse_prompt_to_ast,
         resolve_ast_to_prompt,
         combine_negative_prompts,
-        check_prompt_syntax
+        check_prompt_syntax,
+        count_ast_combinations
     )
 
 class ExpertTextPromptNode:
@@ -20,14 +22,14 @@ class ExpertTextPromptNode:
         return {
             "required": {
                 "positive_prompt": ("STRING", {"multiline": True, "default": ""}),
-                "negative_prompt": ("STRING", {"multiline": True, "default": "(3d render, cgi:1.3), $negative, (deformed hands:1.2)"}),
+                "negative_prompt": ("STRING", {"multiline": True, "default": "$negative"}),
                 "negative_mode": (["auto (use $negative)", "prepend", "append", "replace"], {"default": "auto (use $negative)"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
             }
         }
 
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("positive", "negative")
+    RETURN_TYPES = ("STRING", "STRING", "INT")
+    RETURN_NAMES = ("positive", "negative", "combinations")
     FUNCTION = "process"
     CATEGORY = "prompt/expert"
 
@@ -55,7 +57,14 @@ class ExpertTextPromptNode:
             rng=rng
         )
 
-        return (final_positive, final_negative)
+        total_combinations = count_ast_combinations(pos_ast)
+
+        return {
+            "ui": {
+                "text": (f"Combinations: {total_combinations:,}",)
+            },
+            "result": (final_positive, final_negative, total_combinations)
+        }
 
 NODE_CLASS_MAPPINGS = {
     "ExpertTextPrompt": ExpertTextPromptNode

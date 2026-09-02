@@ -13,7 +13,7 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
 - **Prompt Grouping**: `[GRP:NAME]` for organizing complex prompts. Groups can be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
 - **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them. Multiple `//` tags can be used simultaneously.
 - **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements. Multiple `!` tags can be used to keep a specific set of tags active.
-- **Dual Outputs (`positive` & `negative`)**: Generates both positive and negative strings from a unified node setup.
+- **Triple Outputs (`positive`, `negative` & `combinations`)**: Generates positive and negative strings and outputs the live count (`INT`) of total unique prompt combinations.
 - **Inline Negative Extraction (`-`)**: Prefix any tag or wildcard option with `-` (e.g., `-sunglasses`, `-umbrella`) to automatically route it into the `negative` output.
 - **`$negative` Placeholder Injection**: Insert `$negative` into your negative prompt field to specify the exact location where extracted `-` tags are injected.
 - **Flexible Negative Modes**:
