@@ -57,7 +57,10 @@ class ExpertTextPromptNode:
             rng=rng
         )
 
-        total_combinations = count_ast_combinations(pos_ast)
+        pos_combos = count_ast_combinations(pos_ast)
+        neg_ast = parse_prompt_to_ast(negative_prompt) if negative_prompt.strip() else []
+        neg_combos = count_ast_combinations(neg_ast) if neg_ast else 1
+        total_combinations = pos_combos * max(neg_combos, 1)
 
         return (final_positive, final_negative, total_combinations)
 

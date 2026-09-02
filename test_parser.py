@@ -405,5 +405,18 @@ class TestPromptParser(unittest.TestCase):
         self.assertIn("warrior", pos)
         self.assertIn("blurry", neg)
 
+    def test_comfyui_node_execution_with_negative_wildcards(self):
+        """Test combinations multiply correctly when negative_prompt field also contains wildcards."""
+        from expert_prompt_node import ExpertTextPromptNode
+
+        node = ExpertTextPromptNode()
+        pos, neg, combos = node.process(
+            positive_prompt="hero {red | blue}",           # 2 pos combos
+            negative_prompt="{deformed | blurry| mutated}", # 3 neg combos
+            negative_mode="auto (use $negative)",
+            seed=42
+        )
+        self.assertEqual(combos, 6)  # 2 * 3 = 6
+
 if __name__ == '__main__':
     unittest.main()
