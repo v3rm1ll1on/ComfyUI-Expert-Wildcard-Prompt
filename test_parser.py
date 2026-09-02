@@ -391,19 +391,12 @@ class TestPromptParser(unittest.TestCase):
         from expert_prompt_node import ExpertTextPromptNode
 
         node = ExpertTextPromptNode()
-        res = node.process(
+        pos, neg, combos = node.process(
             positive_prompt="warrior, {-shield | sword}",
             negative_prompt="blurry, $negative, deformed",
             negative_mode="auto (use $negative)",
             seed=42
         )
-        if isinstance(res, dict):
-            self.assertIn("ui", res)
-            self.assertIn("text", res["ui"])
-            self.assertEqual(res["ui"]["text"], ("Combinations: 2",))
-            pos, neg, combos = res["result"]
-        else:
-            pos, neg, combos = res
 
         self.assertIsInstance(pos, str)
         self.assertIsInstance(neg, str)

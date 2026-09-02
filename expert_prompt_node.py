@@ -30,7 +30,6 @@ class ExpertTextPromptNode:
 
     RETURN_TYPES = ("STRING", "STRING", "INT")
     RETURN_NAMES = ("positive", "negative", "combinations")
-    OUTPUT_NODE = True
     FUNCTION = "process"
     CATEGORY = "prompt/expert"
 
@@ -60,12 +59,7 @@ class ExpertTextPromptNode:
 
         total_combinations = count_ast_combinations(pos_ast)
 
-        return {
-            "ui": {
-                "text": (f"Combinations: {total_combinations:,}",)
-            },
-            "result": (final_positive, final_negative, total_combinations)
-        }
+        return (final_positive, final_negative, total_combinations)
 
 NODE_CLASS_MAPPINGS = {
     "ExpertTextPrompt": ExpertTextPromptNode
