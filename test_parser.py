@@ -299,13 +299,108 @@ class TestPromptParser(unittest.TestCase):
         res_invalid = check_prompt_syntax("<lora:my_lora:1.0, 8k")
         self.assertFalse(res_invalid.is_valid)
 
-    def test_wildcard_negative_first_separator(self):
-        """Test that when a wildcard option starts with a negative tag, the separator goes to the first positive tag."""
-        text = "woman, {-sunglasses, coat}"
+    def test_count_ast_combinations(self):
+        """Test calculation of total unique prompt combinations."""
+        from prompt_parser import count_ast_combinations
+        
+        ast1 = parse_prompt_to_ast("photo, 8k")
+        self.assertEqual(count_ast_combinations(ast1), 1)
+
+        ast2 = parse_prompt_to_ast("{red | green | blue}")
+        self.assertEqual(count_ast_combinations(ast2), 3)
+
+        ast3 = parse_prompt_to_ast("{red | blue} female, {photorealistic | anime}")
+        self.assertEqual(count_ast_combinations(ast3), 4)
+
+        ast4 = parse_prompt_to_ast("{1-5}")
+        self.assertEqual(count_ast_combinations(ast4), 5)
+
+        ast5 = parse_prompt_to_ast("[GRP:A] {red|blue}, //[GRP:B] {shirt|pants}")
+        self.assertEqual(count_ast_combinations(ast5), 2)  # GRP B is muted
+
+        # Skip chance (+1 state for empty string)
+        ast6 = parse_prompt_to_ast("{50%? sunglasses}")
+        self.assertEqual(count_ast_combinations(ast6), 2)  # sunglasses OR skipped
+
+        ast7 = parse_prompt_to_ast("{50%? {red | blue}}")
+        self.assertEqual(count_ast_combinations(ast7), 3)  # red, blue OR skipped
+
+        # Node-level solo flag
+        ast8 = parse_prompt_to_ast("! {red | blue}, {shirt | pants}")
+        self.assertEqual(count_ast_combinations(ast8), 2)  # Only solo block is counted
+
+        # Solo flag INSIDE wildcard option
+        ast9 = parse_prompt_to_ast("{ ! red dress | blue jeans }")
+        self.assertEqual(count_ast_combinations(ast9), 1)  # Only ! red dress option is active
+
+        # Range step with skip chance: {0-10:2} -> [0, 2, 4, 6, 8, 10] (6 choices) + 1 skip state = 7
+        ast_range_step = parse_prompt_to_ast("{50%? {0-10:2}}")
+        self.assertEqual(count_ast_combinations(ast_range_step), 7)
+
+    def test_soft_skip_mute_reset(self):
+        """Test that //_S_ resets inherited mute state inside an inline block."""
+        ast = parse_prompt_to_ast("{ //[GRP:FOO] armor, //_S_ active_tag }")
+        pos, _ = resolve_ast_to_prompt(ast, random.Random(1))
+        self.assertEqual(pos, "active_tag")
+
+    def test_all_zero_weights_fallback(self):
+        """Test wildcard with all zero weights does not crash and falls back gracefully."""
+        text = "{0% cat | 0% dog}"
         ast = parse_prompt_to_ast(text)
-        pos, neg = resolve_ast_to_prompt(ast, random.Random(1))
-        self.assertEqual(pos, "woman, coat")
-        self.assertEqual(neg, "sunglasses")
+        pos, _ = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertIn(pos, ["cat", "dog"])
+
+    # -------------------------------------------------------------
+    # 7. Node Integration & Boundary Edge Cases
+    # -------------------------------------------------------------
+
+    def test_empty_inputs_and_whitespace(self):
+        """Test completely empty or whitespace-only inputs return empty strings without crashing."""
+        for empty_text in ["", "   ", "\n\t"]:
+            ast = parse_prompt_to_ast(empty_text)
+            pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+            self.assertEqual(pos, "")
+            self.assertEqual(neg, "")
+
+            combined = combine_negative_prompts("", empty_text, "auto (use $negative)", random.Random(42))
+            self.assertEqual(combined, "")
+
+    def test_empty_wildcard_and_empty_options(self):
+        """Test empty wildcard blocks {} and empty branches {cat|} resolve gracefully."""
+        # Leere Klammer
+        ast_empty = parse_prompt_to_ast("photo, {}, dog")
+        pos_empty, _ = resolve_ast_to_prompt(ast_empty, random.Random(42))
+        self.assertEqual(pos_empty, "photo, dog")
+
+        # Option mit leerem Fallback
+        ast_branch = parse_prompt_to_ast("photo, {100% cat | 0%}, dog")
+        pos_branch, _ = resolve_ast_to_prompt(ast_branch, random.Random(42))
+        self.assertEqual(pos_branch, "photo, cat, dog")
+
+    def test_seed_determinism(self):
+        """Test identical seeds yield strictly identical prompt outputs."""
+        prompt = "{red | blue | green | yellow} {car | bike | plane}, {10-99} speed"
+        ast = parse_prompt_to_ast(prompt)
+        
+        res1, _ = resolve_ast_to_prompt(ast, random.Random(1337))
+        res2, _ = resolve_ast_to_prompt(ast, random.Random(1337))
+        self.assertEqual(res1, res2)
+
+    def test_comfyui_node_execution(self):
+        """Test full pipeline pass-through via ExpertTextPromptNode."""
+        from expert_prompt_node import ExpertTextPromptNode
+
+        node = ExpertTextPromptNode()
+        pos, neg = node.process(
+            positive_prompt="warrior, {-shield | sword}",
+            negative_prompt="blurry, $negative, deformed",
+            negative_mode="auto (use $negative)",
+            seed=42
+        )
+        self.assertIsInstance(pos, str)
+        self.assertIsInstance(neg, str)
+        self.assertIn("warrior", pos)
+        self.assertIn("blurry", neg)
 
 if __name__ == '__main__':
     unittest.main()

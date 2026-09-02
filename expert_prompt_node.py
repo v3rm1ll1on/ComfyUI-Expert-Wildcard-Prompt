@@ -1,10 +1,18 @@
 import random
-from .prompt_parser import (
-    parse_prompt_to_ast,
-    resolve_ast_to_prompt,
-    combine_negative_prompts,
-    check_prompt_syntax
-)
+try:
+    from .prompt_parser import (
+        parse_prompt_to_ast,
+        resolve_ast_to_prompt,
+        combine_negative_prompts,
+        check_prompt_syntax
+    )
+except ImportError:
+    from prompt_parser import (
+        parse_prompt_to_ast,
+        resolve_ast_to_prompt,
+        combine_negative_prompts,
+        check_prompt_syntax
+    )
 
 class ExpertTextPromptNode:
     @classmethod

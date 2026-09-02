@@ -182,6 +182,7 @@ class PromptParser:
             is_solo = True
             self.skip_whitespace()
         elif self.match("//_S_"):
+            is_muted = False
             self.skip_whitespace()
         elif self.match("//"):
             is_muted = True
@@ -518,4 +519,67 @@ def combine_negative_prompts(extracted_neg: str, base_neg_input: str, mode: str,
         return clean_commas(f"{base_text}, {extracted_neg}")
     else:  # prepend
         return clean_commas(f"{extracted_neg}, {base_text}")
+
+
+def count_ast_combinations(ast: List[ASTGroup]) -> int:
+    """
+    Calculates the total number of unique prompt variations possible from the given AST.
+    """
+    def check_nodes_has_solo(nodes: List[ASTNode]) -> bool:
+        for n in nodes:
+            if n.is_muted:
+                continue
+            if n.is_solo:
+                return True
+            if isinstance(n, ASTWildcard):
+                if any(check_nodes_has_solo(opt.nodes) for opt in n.options):
+                    return True
+        return False
+
+    has_solo = any(
+        g.is_solo or check_nodes_has_solo(g.nodes)
+        for g in ast if not g.is_muted
+    )
+
+    def count_nodes(nodes: List[ASTNode], group_solo: bool) -> int:
+        total = 1
+        active_found = False
+        for node in nodes:
+            if node.is_muted:
+                continue
+            if has_solo and not (node.is_solo or group_solo or (isinstance(node, ASTWildcard) and check_nodes_has_solo([node]))):
+                continue
+
+            active_found = True
+            if isinstance(node, ASTNumberRange):
+                steps = len(range(node.min_val, node.max_val + 1, node.step))
+                range_opts = max(steps, 1)
+                if node.skip_chance is not None:
+                    range_opts += 1  # 1 zusätzlicher Zustand für "ausgelassen"
+                total *= range_opts
+
+            elif isinstance(node, ASTWildcard):
+                opts_count = 0
+                for opt in node.options:
+                    opts_count += count_nodes(opt.nodes, group_solo or node.is_solo)
+                
+                wildcard_combos = max(opts_count, 1) if opts_count > 0 else 0
+                if node.skip_chance is not None and wildcard_combos > 0:
+                    wildcard_combos += 1  # 1 zusätzlicher Zustand für "ausgelassen"
+                total *= wildcard_combos
+
+        return total if (active_found or not nodes) else 0
+
+    running_product = 1
+    active_groups = False
+    for group in ast:
+        if group.is_muted:
+            continue
+        if has_solo and not (group.is_solo or check_nodes_has_solo(group.nodes)):
+            continue
+            
+        active_groups = True
+        running_product *= count_nodes(group.nodes, group.is_solo)
+
+    return running_product if active_groups else 0
 
