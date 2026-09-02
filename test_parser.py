@@ -434,7 +434,49 @@ class TestPromptParser(unittest.TestCase):
             seed=42
         )
         self.assertIn("[Positive Prompt Syntax Issues]:", debug_info)
-        self.assertIn("Unclosed opening bracket '{'", debug_info)
+        self.assertIn("Unclosed Wildcard '{'", debug_info)
+        self.assertIn("[Resolved Positive Output]:", debug_info)
+
+    def test_user_live_syntax_error_prompt(self):
+        """Test user live complex prompt with unclosed wildcard detection and resolved output debugging."""
+        from expert_prompt_node import ExpertTextPromptNode
+
+        live_prompt = """(stylized art:1.3), game graphic, blizzard style, CGI, 3D, comic, 
+{
+[GRP:WOMAN], 
+a {20-50:10} yo {asian|caucasian|latina|african} woman, 
+{brown|green|blue} eyes, 
+{auburn|blond|black} {short|long} {ponytail|bob|wavy} hair, 
+slightly smiling, 
+{white armor with {cyan|magenta|green} glowing details, detailed texture, -robe}, 
+{50%? {deep, -small breasts|huge, -small breasts|small, -huge breasts|tiny, -huge breasts} cleavage},
+{50%? cyber jewelry}, {50%? makeup
+
+|
+
+[GRP:MAN], 
+a {20-50:10} yo {asian|caucasian|latina|african} man, 
+{brown|green|blue} eyes, 
+{balded | {auburn|blond|black} {{short|long} {ponytail|bob|wavy}} hair}, 
+slightly smiling, 
+{muscles|skinny|fat}, 
+{white armor with {cyan|magenta|green} glowing details, detailed texture, -robe},
+{no|mustache|full|short|stubble} beard
+},
+({three-quarters view|dynamic angle|slight side angle,looking at viewer}:1.2),
+upper body, solid background, futuristic look, sci-fi, soft light, soft shadows"""
+
+        node = ExpertTextPromptNode()
+        pos, neg, combos, debug_info = node.process(
+            positive_prompt=live_prompt,
+            negative_prompt="blurry",
+            negative_mode="auto (use $negative)",
+            seed=42
+        )
+        self.assertIn("[Positive Prompt Syntax Issues]:", debug_info)
+        self.assertIn("Unclosed Wildcard '{'", debug_info)
+        self.assertIn("[Resolved Positive Output]:", debug_info)
+        self.assertIn("[Resolved Negative Output]:", debug_info)
 
     def test_empty_prompt_combinations_count(self):
         """Test count_ast_combinations returns 0 for empty prompts."""

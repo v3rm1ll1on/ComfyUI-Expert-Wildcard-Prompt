@@ -81,6 +81,18 @@ def get_syntax_snippet(text: str, idx: int, width: int = 20) -> str:
     return f'"{prefix}{snippet_str}{suffix}"\n   {pointer_line}'
 
 
+BRACKET_NAMES = {
+    "{": ("Wildcard", "}"),
+    "}": ("Wildcard", "{"),
+    "(": ("Weight/Emphasis", ")"),
+    ")": ("Weight/Emphasis", "("),
+    "[": ("Group Header", "]"),
+    "]": ("Group Header", "["),
+    "<": ("LoRA Tag", ">"),
+    ">": ("LoRA Tag", "<"),
+}
+
+
 def check_prompt_syntax(text: str) -> SyntaxCheckResult:
     errors = []
     stack = []
@@ -90,20 +102,23 @@ def check_prompt_syntax(text: str) -> SyntaxCheckResult:
             stack.append((char, idx))
         elif char in ")}]>":
             expected = {"}": "{", ")": "(", "]": "[", ">": "<"}[char]
+            name, _ = BRACKET_NAMES.get(char, ("Bracket", ""))
             if not stack:
                 snip = get_syntax_snippet(text, idx)
-                errors.append(f"Unmatched closing bracket '{char}' at position {idx}:\n   {snip}")
+                errors.append(f"Unmatched closing {name} '{char}' at position {idx}:\n   {snip}")
             elif stack[-1][0] != expected:
                 snip = get_syntax_snippet(text, idx)
                 open_char, open_idx = stack[-1]
-                errors.append(f"Mismatched bracket '{char}' at position {idx} (opened with '{open_char}' at position {open_idx}):\n   {snip}")
+                open_name, _ = BRACKET_NAMES.get(open_char, ("Bracket", ""))
+                errors.append(f"Mismatched closing {name} '{char}' at position {idx} (opened with {open_name} '{open_char}' at position {open_idx}):\n   {snip}")
                 stack.pop()
             else:
                 stack.pop()
                 
     for char, idx in stack:
         snip = get_syntax_snippet(text, idx)
-        errors.append(f"Unclosed opening bracket '{char}' at position {idx}:\n   {snip}")
+        name, closing = BRACKET_NAMES.get(char, ("Bracket", ""))
+        errors.append(f"Unclosed {name} '{char}' at position {idx} (missing closing '{closing}' near end of prompt/block):\n   {snip}")
         
     return SyntaxCheckResult(is_valid=len(errors) == 0, errors=errors)
 

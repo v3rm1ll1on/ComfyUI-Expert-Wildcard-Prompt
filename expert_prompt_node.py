@@ -73,9 +73,19 @@ class ExpertTextPromptNode:
         safe_combinations = min(total_combinations, 0x7fffffffffffffff)
 
         if not debug_lines:
-            debug_info = f"[Syntax OK]\nCombinations: {total_combinations:,} (Pos: {pos_combos:,}, Neg: {neg_combos:,})"
+            debug_info = (
+                f"[Syntax OK]\n"
+                f"Combinations: {total_combinations:,} (Pos: {pos_combos:,}, Neg: {neg_combos:,})\n\n"
+                f"[Resolved Positive Output]:\n{final_positive}\n\n"
+                f"[Resolved Negative Output]:\n{final_negative}"
+            )
         else:
-            debug_info = "\n\n".join(debug_lines) + f"\n\nCombinations: {total_combinations:,}"
+            debug_info = (
+                "\n\n".join(debug_lines) + "\n\n"
+                f"Combinations: {total_combinations:,}\n\n"
+                f"[Resolved Positive Output]:\n{final_positive}\n\n"
+                f"[Resolved Negative Output]:\n{final_negative}"
+            )
 
         return (final_positive, final_negative, safe_combinations, debug_info)
 
