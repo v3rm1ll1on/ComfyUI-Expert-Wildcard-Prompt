@@ -556,5 +556,11 @@ upper body, solid background, futuristic look, sci-fi, soft light, soft shadows"
             results.add(pos)
         self.assertEqual(results, {"optionA", "optionC"})
 
+    def test_muted_wildcard_combinations_count(self):
+        """Test count_ast_combinations handles inline muted wildcards gracefully without zeroing the entire prompt."""
+        text = "{red | blue}, {//(muted perspective)}"
+        ast = parse_prompt_to_ast(text)
+        self.assertEqual(count_ast_combinations(ast), 2)
+
 if __name__ == '__main__':
     unittest.main()

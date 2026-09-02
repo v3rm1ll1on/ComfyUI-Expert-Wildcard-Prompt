@@ -622,7 +622,9 @@ def count_ast_combinations(ast: List[ASTGroup]) -> int:
                 for opt in node.options:
                     opts_count += count_nodes(opt.nodes, group_solo or node.is_solo)
                 
-                wildcard_combos = max(opts_count, 1) if opts_count > 0 else 0
+                wildcard_combos = opts_count
+                if wildcard_combos == 0 and node.options:
+                    wildcard_combos = 1
                 if node.skip_chance is not None and wildcard_combos > 0:
                     wildcard_combos += 1  # 1 zusätzlicher Zustand für "ausgelassen"
                 total *= wildcard_combos
