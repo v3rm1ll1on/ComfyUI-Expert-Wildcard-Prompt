@@ -29,11 +29,20 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
 
 ## Installation
 
-Navigate to your ComfyUI `custom_nodes` directory and clone this repository:
+### Option 1: Via Comfy Registry (CLI)
+```bash
+comfy node install comfyui-expert-wildcard-prompt
+```
+
+### Option 2: Via ComfyUI Nodes Manager (UI)
+Search for **`ComfyUI Expert Wildcard Prompt`** in the ComfyUI Nodes Manager / Extension Installer and click **Install**.
+
+### Option 3: Manual Git Clone
+Navigate to your ComfyUI `custom_nodes` directory:
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/v3rm1ll1on/comfyi_variable_prompt.git
+git clone https://github.com/v3rm1ll1on/ComfyUI-Expert-Wildcard-Prompt.git
 ```
 
 Restart ComfyUI afterward.
