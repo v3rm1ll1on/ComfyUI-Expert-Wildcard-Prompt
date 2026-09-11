@@ -597,7 +597,7 @@ upper body, solid background, futuristic look, sci-fi, soft light, soft shadows"
         text = "[GRP:POSE], happy, [+GRP:POSE], laughing"
         ast = parse_prompt_to_ast(text)
         pos, _ = resolve_ast_to_prompt(ast, random.Random(42))
-        self.assertEqual(pos, "happy laughing")
+        self.assertEqual(pos, "happy, laughing")
         
     def test_group_kill_negative(self):
         """Test -[GRP:NAME] clears the group and stops its tags from being outputted positively."""

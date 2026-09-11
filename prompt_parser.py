@@ -237,7 +237,7 @@ class PromptParser:
             self.skip_whitespace()
 
         if self.input.startswith("[GRP:", self.pos) or self.input.startswith("[+GRP:", self.pos):
-            grp_match = re.match(r"^\[(\+?)GRP:([^\]]+)\]\s*,?\s*", self.input[self.pos:])
+            grp_match = re.match(r"^\[(\+?)GRP:([^\]]+)\]", self.input[self.pos:])
             if grp_match:
                 is_append = bool(grp_match.group(1))
                 grp_name = grp_match.group(2)
