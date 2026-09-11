@@ -444,27 +444,31 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[s
             resolved_positive.extend(pos_tags)
             resolved_negative.extend(neg_tags)
 
-    # Filter positive tags based on negative tags using word boundaries
-    filtered_positive = []
     clean_negatives = []
     for neg_text, _ in resolved_negative:
         clean_text, _ = parse_sdxl_weight(neg_text)
         clean_negatives.append(re.escape(clean_text.lower()))
 
-    for pos_text, sep in resolved_positive:
-        clean_pos_text, _ = parse_sdxl_weight(pos_text)
-        clean_pos_lower = clean_pos_text.lower()
-        
+    # Build the raw positive string first so we can evaluate full comma-separated phrases
+    raw_pos_str = build_text_with_separators(resolved_positive)
+    
+    final_phrases = []
+    for phrase in raw_pos_str.split(","):
+        phrase = phrase.strip()
+        if not phrase:
+            continue
+            
         is_blacklisted = False
         for neg_pattern in clean_negatives:
-            if re.search(r'\b' + neg_pattern + r'\b', clean_pos_lower):
+            # Word boundary regex \b
+            if re.search(r'\b' + neg_pattern + r'\b', phrase.lower()):
                 is_blacklisted = True
                 break
                 
         if not is_blacklisted:
-            filtered_positive.append((pos_text, sep))
+            final_phrases.append(phrase)
 
-    pos_str = build_text_with_separators(filtered_positive)
+    pos_str = ", ".join(final_phrases)
     neg_str = build_text_with_separators(resolved_negative)
     return pos_str, neg_str
 
