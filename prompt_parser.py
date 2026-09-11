@@ -175,9 +175,9 @@ class PromptParser:
                 inherited_muted = node.is_muted
                 inherited_negative = node.is_negative
                 if getattr(node, "is_grp_start", False):
-                    grp_solo = node.is_solo
-                    grp_muted = node.is_muted
-                    grp_negative = node.is_negative
+                    grp_solo = getattr(node, "grp_solo_status", node.is_solo)
+                    grp_muted = getattr(node, "grp_muted_status", node.is_muted)
+                    grp_negative = getattr(node, "grp_negative_status", node.is_negative)
 
             prev_pos = self.pos
             self.skip_whitespace()
@@ -235,6 +235,9 @@ class PromptParser:
                 next_node = self.parse_node(prefix_separator, is_solo, is_muted, is_negative)
                 if next_node:
                     next_node.is_grp_start = True
+                    next_node.grp_solo_status = is_solo
+                    next_node.grp_muted_status = is_muted
+                    next_node.grp_negative_status = is_negative
                 return next_node
 
         if self.peek() == "{":
