@@ -9,7 +9,7 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
 - **Advanced Wildcards**: `{option1 | option2 | option3}` with full support for nested wildcards.
   - **Equal Chances**: `{red | blue | green}` assigns an equal chance to each option.
   - **Weighted Chances**: `{70% blue | 30% green}` sets explicit relative probabilities.
-- **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely).
+- **Skip Chance (Optional Blocks)**: `{20%? optional sunglasses, leather jacket, red hat}` (20% chance to skip the ENTIRE block completely).
 - **Prompt Grouping (`[GRP:NAME]`)**: Structure large prompts. Groups can be redefined/overwritten (`[GRP:NAME]`), appended to (`[+GRP:NAME]`), killed (`-[GRP:NAME]`), muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
 - **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them. Multiple `//` tags can be used simultaneously.
 - **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements. Multiple `!` tags can be used to keep a specific set of tags active.
@@ -132,12 +132,17 @@ You don't need to manually calculate probabilities so everything sums to 100%. T
 - **3. Zero-Sum Safety Guard**
   If all options are set to 0% (`{0% red | 0% green}`), the node automatically falls back to equal distribution (50%/50%) instead of crashing.
 
-### 3. Skip Chance (Optional Tags)
+> [!WARNING]
+> **Weights (`XX%`) vs. Skip Chance (`XX%?`)**
+> Do not confuse probability weights with skip chances! If you want an option to appear rarely (e.g. 5%), use a normal weight: `{blonde | 5% brunette | black | red}`.
+> The `?` syntax (e.g. `{80%? ...}`) is EXCLUSIVELY used at the very start of a wildcard to skip the *entire* block, yielding an empty string. If you place a `?` inside an option list, it will just be parsed as a normal weight.
+
+### 3. Skip Chance (Optional Blocks)
 Add optional elements with a percentage chance of skipping:
 ```text
-portrait of a woman, {20%? glowing neon face tattoos}
+portrait of a woman, {20%? glowing neon face tattoos, multiple piercings, dark makeup}
 ```
-*(20% chance to omit the tag entirely, 80% chance to include it).*
+*(20% chance to omit all of these tags entirely, 80% chance to include the whole block).*
 
 ### 4. Number Range Wildcards (`{MIN-MAX:STEP}`)
 Generate random numeric values across a range with optional step increments:

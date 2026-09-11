@@ -617,7 +617,8 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
             pos_tags, neg_tags = resolve_node(child, parent_solo or node.is_solo, parent_muted, is_neg, rng, has_solo)
             
             if first_pos and pos_tags and pos_tags[0][0] != "__MARKER__":
-                pos_tags[0] = (pos_tags[0][0], sep, pos_tags[0][2])
+                new_sep = "," if pos_tags[0][1] == "," else sep
+                pos_tags[0] = (pos_tags[0][0], new_sep, pos_tags[0][2])
                 first_pos = False
 
             sub_pos.extend(pos_tags)

@@ -10,7 +10,7 @@ Customize selection odds and add optional elements without using groups:
 
 **Positive Prompt**
 ```text
-RAW photo of a young woman with {70% blue eyes | 20% green eyes | brown eyes}, wearing a {60% leather jacket | denim jacket}, {25%? glowing neon face tattoos}, photorealistic
+RAW photo of a young woman with {70% blue eyes | 20% green eyes | brown eyes}, wearing a {60% leather jacket | denim jacket}, {25%? glowing neon face tattoos, facial piercings}, photorealistic
 ```
 
 > [!NOTE]
@@ -18,6 +18,11 @@ RAW photo of a young woman with {70% blue eyes | 20% green eyes | brown eyes}, w
 > You don't have to specify percentages for every single option!
 > - In `{70% blue eyes | 20% green eyes | brown eyes}`, explicit weights sum to **90%**. The unweighted option `brown eyes` automatically receives the remaining **10%**.
 > - In `{60% leather jacket | denim jacket}`, `denim jacket` automatically receives the remaining **40%**.
+
+> [!WARNING]
+> **Weights (`XX%`) vs. Skip Chance (`XX%?`)**
+> Do not mix these up! If you want a specific option inside a list to be rare (e.g. 5%), just use a normal weight: `{blonde | 5% brunette | black}`. The remaining 95% is automatically split among the others.
+> The `?` (e.g. `{80%? ...}`) is ONLY used at the beginning of a wildcard to skip the *entire* block (yielding nothing). If placed inside an option list, it will incorrectly act as a normal weight.
 
 **Negative Prompt**
 ```text
@@ -49,7 +54,7 @@ Once prompts grow larger, wrap sections in `[GRP:NAME]` blocks to maintain struc
 **Positive Prompt**
 ```text
 [GRP:STYLE], RAW photo, 8k resolution, photorealistic, professional photography,
-[GRP:SUBJECT], portrait of a {18-40}yo woman with {70% blue eyes | 30% hazel eyes}, {20%? neon face tattoos},
+[GRP:SUBJECT], portrait of a {18-40}yo woman with {70% blue eyes | 30% hazel eyes}, {20%? neon face tattoos, dark makeup},
 [GRP:CLOTHING], wearing a {60% leather jacket | 40% denim jacket},
 //[GRP:ENVIRONMENT], standing in a rainy city street at night
 ```
@@ -66,7 +71,7 @@ Once prompts grow larger, wrap sections in `[GRP:NAME]` blocks to maintain struc
 **Positive Prompt**
 ```text
 [GRP:STYLE], epic fantasy concept art, digital painting, trending on artstation,
-[GRP:BUILDING], massive stone castle on a cliff, {80% gothic towers | 20% crystal spires}, {30%? glowing magic runes on walls},
+[GRP:BUILDING], massive stone castle on a cliff, {80% gothic towers | 20% crystal spires}, {30%? glowing magic runes on walls, mystical aura},
 [GRP:WEATHER], {50% thunderstorm with lightning | 30% sunny golden hour | 20% dense fog},
 [GRP:EXTRAS], {40%? flying dragons in distance | 10%? floating magical islands}
 ```

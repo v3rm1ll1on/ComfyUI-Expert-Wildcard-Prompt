@@ -76,8 +76,8 @@ Demonstrates how optional skip-chance tags (`X%?`) interact inside deep nested w
 #### Positive Prompt
 ```text
 [GRP:STYLE], digital fantasy artwork, concept art,
-[GRP:SUBJECT], a fantasy {70% dragon with {80% crimson scales, -wings | 20% golden scales, {30%? glowing crown, -horns}} | 30% griffin with {50% eagle wings, -beak | 50% raven wings, -feathers}},
-[GRP:ENVIRONMENT], {20%? resting on a mountain peak, -cloudy}
+[GRP:SUBJECT], a fantasy {70% dragon with {80% crimson scales, -wings | 20% golden scales, {30%? glowing crown, golden aura, -horns}} | 30% griffin with {50% eagle wings, -beak | 50% raven wings, -feathers}},
+[GRP:ENVIRONMENT], {20%? resting on a mountain peak, overlooking a valley, -cloudy}
 ```
 
 #### Negative Prompt Template

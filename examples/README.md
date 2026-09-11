@@ -9,7 +9,7 @@ This directory contains production-ready templates and step-by-step guides rangi
 
 | File | Level | Focus / Features Demonstrated |
 | :--- | :--- | :--- |
-| **[01 - Basic Wildcards](./01_basic_wildcard.md)** | 🟢 Beginner | Simple options `{cat \| dog}`, probabilities `{70% A \| 30% B}`, skip-chances `{30%? tag}`. |
+| **[01 - Basic Wildcards](./01_basic_wildcard.md)** | 🟢 Beginner | Simple options `{cat \| dog}`, probabilities `{70% A \| 30% B}`, skip-chances `{30%? tag1, tag2}`. |
 | **[02 - Groups & Weights](./02_intermediate_groups_and_weights.md)** | 🟡 Intermediate | Grouping `[GRP:NAME]`, SDXL weights `(tag:1.2)`, LoRAs `<lora:name:1.0>`. |
 | **[03 - Pony V6 Template](./03_advanced_pony_v6_template.md)** | 🟠 Advanced | Pony V6 score tags, source rating wildcards, dual-output negative routing (`-`). |
 | **[04 - Photorealistic Dual-Prompt](./04_expert_photorealistic_dual_prompt.md)** | 🔴 Expert | High-end 35mm photorealism, `$negative` placeholder injection, group muting. |
