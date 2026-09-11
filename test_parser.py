@@ -165,6 +165,29 @@ class TestPromptParser(unittest.TestCase):
         res = combine_negative_prompts(extracted, base_neg, "auto (use $negative)", random.Random(42))
         self.assertEqual(res, "(3d render:1.3), sunglasses, umbrella, (deformed hands:1.2)")
 
+    def test_negative_tag_word_boundary_filtering(self):
+        """Test that negative tags act as a subtractive filter for positive tags using word boundaries."""
+        # 1. Exact match (starfish should survive, fish should be filtered)
+        text_exact = "fish, starfish, -fish"
+        ast_exact = parse_prompt_to_ast(text_exact)
+        pos_exact, neg_exact = resolve_ast_to_prompt(ast_exact, random.Random(42))
+        self.assertEqual(pos_exact, "starfish")
+        self.assertEqual(neg_exact, "fish")
+        
+        # 2. Multi-word match (green fish and fish and chips should be filtered, jellyfish survives)
+        text_multi = "green fish, jellyfish, fish and chips, -fish"
+        ast_multi = parse_prompt_to_ast(text_multi)
+        pos_multi, neg_multi = resolve_ast_to_prompt(ast_multi, random.Random(42))
+        self.assertEqual(pos_multi, "jellyfish")
+        self.assertEqual(neg_multi, "fish")
+
+        # 3. Match with SDXL weights
+        text_weights = "(green fish:1.5), (jellyfish:0.8), -(fish:1.2)"
+        ast_weights = parse_prompt_to_ast(text_weights)
+        pos_weights, neg_weights = resolve_ast_to_prompt(ast_weights, random.Random(42))
+        self.assertEqual(pos_weights, "(jellyfish:0.8)")
+        self.assertEqual(neg_weights, "(fish:1.2)")
+
     def test_negative_modes_without_placeholder(self):
         """Test prepend, append, and replace negative modes."""
         extracted = "umbrella, coat"

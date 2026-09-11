@@ -1,7 +1,7 @@
 # 04 - Expert Photorealistic Dual-Prompt Template
 
 Demonstrates all advanced features:
-- Dual-output routing with inline negative extraction (`-`)
+- Dual-output routing with inline negative extraction (`-`) and subtractive word-boundary filtering
 - Precise placement via `$negative` placeholder
 - Group-level organization (`[GRP:]`) and tag-level solo (`!`)
 - Inline tag muting (`//`) and nested probabilistic wildcards

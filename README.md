@@ -14,7 +14,7 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
 - **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them. Multiple `//` tags can be used simultaneously.
 - **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements. Multiple `!` tags can be used to keep a specific set of tags active.
 - **Quadruple Outputs (`positive`, `negative`, `combinations` & `debug_info`)**: Generates positive and negative strings, outputs live combination counts (`INT`), and provides a `debug_info` (`STRING`) pin displaying visual syntax error diagnostics with `^` pointers.
-- **Inline Negative Extraction (`-`)**: Prefix any tag or wildcard option with `-` (e.g., `-sunglasses`, `-umbrella`) to automatically route it into the `negative` output.
+- **Inline Negative Extraction & Subtractive Filtering (`-`)**: Prefix any tag or wildcard option with `-` (e.g., `-sunglasses`, `-umbrella`). This routes the tag into the `negative` output AND acts as a smart filter, actively removing any positive tags that contain this exact word!
 - **`$negative` Placeholder Injection**: Insert `$negative` into your negative prompt field to specify the exact location where extracted `-` tags are injected.
 - **Flexible Negative Modes**:
   - `auto (use $negative)`: Injects extracted tags into the `$negative` placeholder if present, otherwise prepends them.
@@ -70,7 +70,7 @@ Restart ComfyUI afterward.
 | **Inline Solo Tag** | `! red dress` | Isolates marked tags. Non-solo tags are ignored. |
 | **Prompt Group** | `[GRP:NAME], tag1, tag2` | Groups tags into a structured, manageable block. |
 | **Mute / Solo Group** | `//[GRP:NAME]` or `![GRP:NAME]` | Mutes (`//`) or Solos (`!`) an entire named group. |
-| **Inline Negative Extraction** | `-sunglasses` | Automatically extracts tag to negative output (removes from positive). |
+| **Inline Negative Extraction** | `-fish` | Routes tag to negative output AND actively removes any positive tags containing the exact word "fish" (e.g. removes "green fish" but keeps "starfish"). |
 | **Negative Placeholder** | `$negative` | Specifies exact insertion point for `-` tags in `negative_prompt`. |
 | **SDXL Weights & LoRAs** | `(masterpiece:1.2)`, `<lora:name:1.0>` | Preserves weight syntax and LoRA tags natively. |
 
@@ -173,12 +173,12 @@ Structure large prompts into organized blocks that can be muted or soloed as a w
 //[GRP:BACKGROUND], city skyline at dusk
 ```
 
-### 7. Expert Dual-Prompting with Inline Negative (`-` & `$negative`)
-Combine positive wildcards, automatic negative extraction, and custom negative templates in one go:
+### 7. Expert Dual-Prompting & Subtractive Filtering (`-` & `$negative`)
+Combine positive wildcards, automatic negative extraction, and custom negative templates in one go. The `-` tag also acts as an active **subtractive filter** for your positive prompt using whole-word matching.
 
 **`positive_prompt`**:
 ```text
-[GRP:CHARACTER], portrait of a young woman, {70% sunny day, -sunglasses | 30% rainy day, -umbrella}, leather jacket
+[GRP:CHARACTER], portrait of a young woman, {70% sunny day, -sunglasses | 30% rainy day, -umbrella}, leather jacket, green umbrella
 ```
 
 **`negative_prompt`**:
@@ -188,10 +188,10 @@ Combine positive wildcards, automatic negative extraction, and custom negative t
 
 **Output Results:**
 - If `sunny day` is selected by the seed:
-  - `positive`: `portrait of a young woman, sunny day, leather jacket`
+  - `positive`: `portrait of a young woman, sunny day, leather jacket, green umbrella`
   - `negative`: `(3d render, cgi, plastic skin:1.3), sunglasses, (deformed hands:1.2), blurry`
 - If `rainy day` is selected by the seed:
-  - `positive`: `portrait of a young woman, rainy day, leather jacket`
+  - `positive`: `portrait of a young woman, rainy day, leather jacket` (Notice how `green umbrella` is actively deleted from the positive prompt because of `-umbrella`!)
   - `negative`: `(3d render, cgi, plastic skin:1.3), umbrella, (deformed hands:1.2), blurry`
 
 ---
