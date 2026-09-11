@@ -10,7 +10,7 @@ A powerful ComfyUI custom node featuring AST-based prompt parsing, advanced wild
   - **Equal Chances**: `{red | blue | green}` assigns an equal chance to each option.
   - **Weighted Chances**: `{70% blue | 30% green}` sets explicit relative probabilities.
 - **Skip Chance (Optional Tags)**: `{20%? optional sunglasses}` (20% chance to skip the tag completely).
-- **Prompt Grouping**: `[GRP:NAME]` for organizing complex prompts. Groups can be muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
+- **Prompt Grouping (`[GRP:NAME]`)**: Structure large prompts. Groups can be redefined/overwritten (`[GRP:NAME]`), appended to (`[+GRP:NAME]`), killed (`-[GRP:NAME]`), muted (`//[GRP:NAME]`) or set to solo (`![GRP:NAME]`).
 - **Inline Mute (`//`)**: Disable specific tags or entire prompt groups without deleting them. Multiple `//` tags can be used simultaneously.
 - **Inline Solo (`!`)**: Isolate specific tags or groups, ignoring all non-solo elements. Multiple `!` tags can be used to keep a specific set of tags active.
 - **Quadruple Outputs (`positive`, `negative`, `combinations` & `debug_info`)**: Generates positive and negative strings, outputs live combination counts (`INT`), and provides a `debug_info` (`STRING`) pin displaying visual syntax error diagnostics with `^` pointers.
@@ -68,8 +68,9 @@ Restart ComfyUI afterward.
 | **Nested Wildcards** | `{60% female, {70% armor \| 30% suit} \| 40% male}` | Multi-level wildcard nesting with combined probabilities. |
 | **Inline Mute Tag** | `// leather jacket` | Temporarily deactivates tag without deleting it. |
 | **Inline Solo Tag** | `! red dress` | Isolates marked tags. Non-solo tags are ignored. |
-| **Prompt Group** | `[GRP:NAME], tag1, tag2` | Groups tags into a structured, manageable block. |
-| **Mute / Solo Group** | `//[GRP:NAME]` or `![GRP:NAME]` | Mutes (`//`) or Solos (`!`) an entire named group. |
+| **Prompt Group** | `[GRP:NAME], tag1, tag2` | Groups tags into a structured, manageable block. Redefining it later overwrites the group. |
+| **Append to Group** | `[+GRP:NAME], tag3` | Appends tags to an existing group without overwriting it. |
+| **Kill / Mute Group** | `-[GRP:NAME]` or `//[GRP:NAME]` | Completely clears the group from positive output (Mute) and optionally routes to negative (Kill). |
 | **Inline Negative Extraction** | `-fish` | Routes tag to negative output AND actively removes any positive tags containing the exact word "fish" (e.g. removes "green fish" but keeps "starfish"). |
 | **Negative Placeholder** | `$negative` | Specifies exact insertion point for `-` tags in `negative_prompt`. |
 | **SDXL Weights & LoRAs** | `(masterpiece:1.2)`, `<lora:name:1.0>` | Preserves weight syntax and LoRA tags natively. |
@@ -163,15 +164,26 @@ Combine multiple levels of wildcards for complex variation:
 a {60% female warrior with {70% knight armor | 30% cyber suit} | 40% cyberpunk rogue}
 ```
 
-### 6. Prompt Grouping (`[GRP:NAME]`)
-Structure large prompts into organized blocks that can be muted or soloed as a whole:
+### 6. Dynamic Prompt Grouping (`[GRP:NAME]`, `[+GRP:NAME]`, `-[GRP:NAME]`)
+Structure large prompts into organized blocks that can be dynamically manipulated anywhere, even inside wildcards!
+
+- **Overwrite (`[GRP:NAME]`)**: Clears any previous tags for this group and starts fresh.
+- **Append (`[+GRP:NAME]`)**: Adds tags to the existing group without deleting old ones.
+- **Kill / Mute (`-[GRP:NAME]` / `//[GRP:NAME]`)**: Completely removes the entire group from the positive output.
+
 ```text
-[GRP:QUALITY], (masterpiece:1.2), ultra-detailed,
+[GRP:EXPRESSION], happy, smiling
 
-[GRP:CHARACTER], cyberpunk girl, neon hair,
-
-//[GRP:BACKGROUND], city skyline at dusk
+[GRP:ACTION],
+{
+  [GRP:POSE1], standing around, [+GRP:EXPRESSION], laughing
+  |
+  [GRP:POSE2], running away, [GRP:EXPRESSION], exhausted, sweaty
+  |
+  [GRP:POSE3], jumping, -[GRP:EXPRESSION]
+}
 ```
+*(If POSE1 is rolled, EXPRESSION becomes `happy, smiling, laughing`. If POSE2 is rolled, EXPRESSION is overwritten to just `exhausted, sweaty`. If POSE3 is rolled, EXPRESSION is completely deleted!)*
 
 ### 7. Expert Dual-Prompting & Subtractive Filtering (`-` & `$negative`)
 Combine positive wildcards, automatic negative extraction, and custom negative templates in one go. The `-` tag also acts as an active **subtractive filter** for your positive prompt using whole-word matching.

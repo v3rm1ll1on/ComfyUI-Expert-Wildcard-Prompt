@@ -8,7 +8,8 @@ class ASTNode:
         self.is_muted = is_muted
         self.is_solo = is_solo
         self.is_negative = is_negative
-        self.prefix_separator = prefix_separator  # "", " ", ","
+        self.prefix_separator = prefix_separator
+        self.group_name = "GENERAL"  # "", " ", ","
 
 
 class ASTTag(ASTNode):
@@ -39,6 +40,13 @@ class ASTNumberRange(ASTNode):
         self.max_val = max_val
         self.step = max(1, step)
         self.skip_chance = skip_chance
+
+
+class ASTGroupMarker(ASTNode):
+    def __init__(self, name: str, mode: str, **kwargs):
+        super().__init__(**kwargs)
+        self.name = name
+        self.mode = mode
 
 
 class ASTGroup:
@@ -144,7 +152,7 @@ class PromptParser:
         while self.pos < len(self.input) and self.input[self.pos].isspace():
             self.pos += 1
 
-    def parse_nodes_until(self, stop_tokens: List[str]) -> List[ASTNode]:
+    def parse_nodes_until(self, stop_tokens: List[str], initial_group: str = "GENERAL") -> List[ASTNode]:
         nodes = []
         self.skip_whitespace()
         last_char = ""
@@ -154,6 +162,7 @@ class PromptParser:
         grp_solo = False
         grp_muted = False
         grp_negative = False
+        current_group = initial_group
 
         while self.pos < len(self.input):
             should_stop = any(self.input.startswith(tok, self.pos) for tok in stop_tokens)
@@ -168,13 +177,15 @@ class PromptParser:
                 self.skip_whitespace()
                 continue
 
-            node = self.parse_node(last_char, inherited_solo, inherited_muted, inherited_negative)
+            node = self.parse_node(last_char, inherited_solo, inherited_muted, inherited_negative, current_group)
             if node:
+                node.group_name = current_group
                 nodes.append(node)
                 inherited_solo = node.is_solo
                 inherited_muted = node.is_muted
                 inherited_negative = node.is_negative
-                if getattr(node, "is_grp_start", False):
+                if isinstance(node, ASTGroupMarker):
+                    current_group = node.name
                     grp_solo = getattr(node, "grp_solo_status", node.is_solo)
                     grp_muted = getattr(node, "grp_muted_status", node.is_muted)
                     grp_negative = getattr(node, "grp_negative_status", node.is_negative)
@@ -196,8 +207,7 @@ class PromptParser:
                 self.advance()
 
         return nodes
-
-    def parse_node(self, last_char: str = "", inherited_solo: bool = False, inherited_muted: bool = False, inherited_negative: bool = False) -> Optional[ASTNode]:
+    def parse_node(self, last_char: str = "", inherited_solo: bool = False, inherited_muted: bool = False, inherited_negative: bool = False, current_group: str = "GENERAL") -> Optional[ASTNode]:
         prefix_separator = last_char if last_char in " \t\n\r," else ""
         self.skip_whitespace()
 
@@ -226,22 +236,26 @@ class PromptParser:
             is_negative = True
             self.skip_whitespace()
 
-        # Check for inline group header inside wildcards/nodes and consume it cleanly
-        if self.input.startswith("[GRP:", self.pos):
-            grp_match = re.match(r"^\[GRP:[^\]]+\]\s*,?\s*", self.input[self.pos:])
+        if self.input.startswith("[GRP:", self.pos) or self.input.startswith("[+GRP:", self.pos):
+            grp_match = re.match(r"^\[(\+?)GRP:([^\]]+)\]\s*,?\s*", self.input[self.pos:])
             if grp_match:
+                is_append = bool(grp_match.group(1))
+                grp_name = grp_match.group(2)
                 self.pos += len(grp_match.group(0))
                 self.skip_whitespace()
-                next_node = self.parse_node(prefix_separator, is_solo, is_muted, is_negative)
-                if next_node:
-                    next_node.is_grp_start = True
-                    next_node.grp_solo_status = is_solo
-                    next_node.grp_muted_status = is_muted
-                    next_node.grp_negative_status = is_negative
-                return next_node
+                if is_solo: mode = "solo"
+                elif is_muted: mode = "mute"
+                elif is_negative: mode = "negative"
+                elif is_append: mode = "append"
+                else: mode = "overwrite"
+                marker = ASTGroupMarker(name=grp_name, mode=mode, is_solo=is_solo, is_muted=is_muted, is_negative=is_negative)
+                marker.grp_solo_status = is_solo
+                marker.grp_muted_status = is_muted
+                marker.grp_negative_status = is_negative
+                return marker
 
         if self.peek() == "{":
-            wildcard = self.parse_wildcard()
+            wildcard = self.parse_wildcard(current_group)
             if wildcard:
                 wildcard.is_muted = is_muted
                 wildcard.is_solo = is_solo
@@ -285,7 +299,7 @@ class PromptParser:
             prefix_separator=prefix_separator
         )
 
-    def parse_wildcard(self) -> Optional[ASTNode]:
+    def parse_wildcard(self, current_group: str) -> Optional[ASTNode]:
         self.match("{")
         self.skip_whitespace()
 
@@ -317,7 +331,7 @@ class PromptParser:
                 prob_weight = float(prob_match.group(1))
                 self.pos += len(prob_match.group(0))
 
-            nodes = self.parse_nodes_until(["|", "}"])
+            nodes = self.parse_nodes_until(["|", "}"], current_group)
             options.append(ASTWildcardOption(prob_weight=prob_weight, nodes=nodes))
 
             if self.peek() == "|":
@@ -330,7 +344,7 @@ class PromptParser:
 
 
 def parse_prompt_to_ast(text: str) -> List[ASTGroup]:
-    group_regex = re.compile(r"(?:(-|\/\/_S_\s*|\/\/\s*|!))?\[GRP:([^\]]+)\]")
+    group_regex = re.compile(r"(?:(-|\/\/_S_\s*|\/\/\s*|!|\+))?\[GRP:([^\]]+)\]")
     all_matches = list(group_regex.finditer(text))
     matches = []
     for m in all_matches:
@@ -366,13 +380,15 @@ def parse_prompt_to_ast(text: str) -> List[ASTGroup]:
     groups = []
     for g in parsed_groups:
         parser = PromptParser(g["content"])
-        nodes = parser.parse_nodes_until([])
+        nodes = parser.parse_nodes_until([], g["name"])
 
         is_solo = g["prefix"].startswith("!")
         is_muted = g["prefix"].startswith("//") and not g["prefix"].startswith("//_S_")
         is_negative = g["prefix"].startswith("-")
 
-        groups.append(ASTGroup(name=g["name"], nodes=nodes, is_muted=is_muted, is_solo=is_solo, is_negative=is_negative))
+        g_obj = ASTGroup(name=g["name"], nodes=nodes, is_muted=is_muted, is_solo=is_solo, is_negative=is_negative)
+        g_obj.prefix = g["prefix"]
+        groups.append(g_obj)
 
     return groups
 
@@ -432,20 +448,58 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[s
             return node.is_solo or group_is_solo or (isinstance(node, ASTWildcard) and check_nodes_has_solo([node]))
         return True
 
-    resolved_positive: List[Tuple[str, str]] = []
-    resolved_negative: List[Tuple[str, str]] = []
+    raw_pos = []
+    raw_neg = []
 
     for group in groups:
-        if group.is_muted and not (has_solo and group.is_solo):
-            continue
+        mode = "negative" if group.is_negative else "mute" if group.is_muted else "solo" if group.is_solo else "append" if hasattr(group, "prefix") and "+" in group.prefix else "overwrite"
+        raw_pos.append(("__MARKER__", group.name, mode))
+
+        if group.is_muted and not (has_solo and group.is_solo): continue
 
         for node in group.nodes:
-            if not is_node_active(node, group.is_solo, group.is_muted):
-                continue
-
+            if not is_node_active(node, group.is_solo, group.is_muted): continue
             pos_tags, neg_tags = resolve_node(node, group.is_solo, group.is_muted, group.is_negative, rng, has_solo)
-            resolved_positive.extend(pos_tags)
-            resolved_negative.extend(neg_tags)
+            raw_pos.extend(pos_tags)
+            raw_neg.extend(neg_tags)
+
+    group_tags_pos = {}
+    group_order_pos = []
+    for item in raw_pos:
+        if item[0] == "__MARKER__":
+            _, name, mode = item
+            if name not in group_order_pos: group_order_pos.append(name)
+            if mode in ["overwrite", "mute", "negative"]:
+                group_tags_pos[name] = []
+        else:
+            text, sep, gname = item
+            if gname not in group_tags_pos:
+                group_tags_pos[gname] = []
+                if gname not in group_order_pos: group_order_pos.append(gname)
+            group_tags_pos[gname].append((text, sep))
+            
+    resolved_positive = []
+    for gname in group_order_pos:
+        resolved_positive.extend(group_tags_pos.get(gname, []))
+
+    group_tags_neg = {}
+    group_order_neg = []
+    for item in raw_neg:
+        if item[0] == "__MARKER__":
+            _, name, mode = item
+            if name not in group_order_neg: group_order_neg.append(name)
+            if mode in ["overwrite", "mute"]: 
+                group_tags_neg[name] = []
+        else:
+            text, sep, gname = item
+            if gname not in group_tags_neg:
+                group_tags_neg[gname] = []
+                if gname not in group_order_neg: group_order_neg.append(gname)
+            group_tags_neg[gname].append((text, sep))
+
+    resolved_negative = []
+    for gname in group_order_neg:
+        resolved_negative.extend(group_tags_neg.get(gname, []))
 
     clean_negatives = []
     for neg_text, _ in resolved_negative:
@@ -476,16 +530,20 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[s
     return pos_str, neg_str
 
 
-def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_negative: bool, rng: random.Random, has_solo: bool) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
+def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_negative: bool, rng: random.Random, has_solo: bool) -> Tuple[List[Tuple[str, str, str]], List[Tuple[str, str, str]]]:
     is_neg = node.is_negative or parent_negative
     sep = node.prefix_separator or " "
+    grp = getattr(node, "group_name", "GENERAL")
+
+    if isinstance(node, ASTGroupMarker):
+        return [("__MARKER__", node.name, node.mode)], []
 
     if isinstance(node, ASTTag):
         text = node.text if node.is_lora else format_sdxl_weight(node.text, node.weight)
         if is_neg:
-            return [], [(text, sep)]
+            return [], [(text, sep, grp)]
         else:
-            return [(text, sep)], []
+            return [(text, sep, grp)], []
 
     elif isinstance(node, ASTNumberRange):
         if node.skip_chance is not None:
@@ -498,9 +556,9 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
         text = str(chosen_val)
 
         if is_neg:
-            return [], [(text, sep)]
+            return [], [(text, sep, grp)]
         else:
-            return [(text, sep)], []
+            return [(text, sep, grp)], []
 
     elif isinstance(node, ASTWildcard):
         if node.skip_chance is not None:
@@ -558,9 +616,8 @@ def resolve_node(node: ASTNode, parent_solo: bool, parent_muted: bool, parent_ne
 
             pos_tags, neg_tags = resolve_node(child, parent_solo or node.is_solo, parent_muted, is_neg, rng, has_solo)
             
-            # Für das erste positive Kind in einer Wildcard übernehmen wir den Separator der Wildcard selbst
-            if first_pos and pos_tags:
-                pos_tags[0] = (pos_tags[0][0], sep)
+            if first_pos and pos_tags and pos_tags[0][0] != "__MARKER__":
+                pos_tags[0] = (pos_tags[0][0], sep, pos_tags[0][2])
                 first_pos = False
 
             sub_pos.extend(pos_tags)

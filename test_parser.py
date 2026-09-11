@@ -585,5 +585,45 @@ upper body, solid background, futuristic look, sci-fi, soft light, soft shadows"
         ast = parse_prompt_to_ast(text)
         self.assertEqual(count_ast_combinations(ast), 2)
 
+    def test_group_overwrite(self):
+        """Test [GRP:NAME] overwrites previously defined tags in the same group."""
+        text = "[GRP:POSE], happy, [GRP:POSE], sad"
+        ast = parse_prompt_to_ast(text)
+        pos, _ = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "sad")
+        
+    def test_group_append(self):
+        """Test [+GRP:NAME] appends to previously defined tags in the same group."""
+        text = "[GRP:POSE], happy, [+GRP:POSE], laughing"
+        ast = parse_prompt_to_ast(text)
+        pos, _ = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "happy laughing")
+        
+    def test_group_kill_negative(self):
+        """Test -[GRP:NAME] clears the group and stops its tags from being outputted positively."""
+        text = "[GRP:EXPRESSION], happy, smiling, -[GRP:EXPRESSION]"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "")
+        self.assertEqual(neg, "")
+
+    def test_group_mute(self):
+        """Test //[GRP:NAME] clears the group completely from output."""
+        text = "[GRP:EXPRESSION], happy, smiling, //[GRP:EXPRESSION]"
+        ast = parse_prompt_to_ast(text)
+        pos, neg = resolve_ast_to_prompt(ast, random.Random(42))
+        self.assertEqual(pos, "")
+        self.assertEqual(neg, "")
+
+    def test_group_dynamic_overwrite_in_wildcard(self):
+        """Test dynamic group overwrite based on selected wildcard branch."""
+        text = "[GRP:EXP], default, { [GRP:POSE], run | [GRP:POSE], jump, [GRP:EXP], overwritten }"
+        ast = parse_prompt_to_ast(text)
+        results = set()
+        for seed in range(20):
+            pos, _ = resolve_ast_to_prompt(ast, random.Random(seed))
+            results.add(pos)
+        self.assertEqual(results, {"default, run", "overwritten, jump"})
+
 if __name__ == '__main__':
     unittest.main()
