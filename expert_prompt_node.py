@@ -9,6 +9,7 @@ try:
     from .prompt_parser import (
         parse_prompt_to_ast,
         resolve_ast_to_prompt,
+        resolve_ast_by_groups,
         combine_negative_prompts,
         check_prompt_syntax,
         count_ast_combinations
@@ -17,10 +18,13 @@ except ImportError:
     from prompt_parser import (
         parse_prompt_to_ast,
         resolve_ast_to_prompt,
+        resolve_ast_by_groups,
         combine_negative_prompts,
         check_prompt_syntax,
         count_ast_combinations
     )
+
+MOSS_CENTRALIZED_SPAN = 1024
 
 JSON_STRUCTURAL_KEYS = frozenset({
     "bbox_coord_space",
@@ -28,6 +32,94 @@ JSON_STRUCTURAL_KEYS = frozenset({
     "canvas",
     "borders",
 })
+
+
+def _to_centralized_bbox(box2d: List[Any]) -> List[int]:
+    """Maps normalized [ymin, xmin, ymax, xmax] (0..1000) to centralized [-512..512] yxyx coords."""
+    ymin, xmin, ymax, xmax = (float(box2d[0]), float(box2d[1]), float(box2d[2]), float(box2d[3]))
+    return [
+        round(((ymin - 500.0) / 1000.0) * MOSS_CENTRALIZED_SPAN),
+        round(((xmin - 500.0) / 1000.0) * MOSS_CENTRALIZED_SPAN),
+        round(((ymax - 500.0) / 1000.0) * MOSS_CENTRALIZED_SPAN),
+        round(((xmax - 500.0) / 1000.0) * MOSS_CENTRALIZED_SPAN),
+    ]
+
+
+def _resolve_moss_ide_envelope(
+    raw_prompt: str,
+    spatial_layout: Dict[str, Any],
+    rng: random.Random,
+    debug_lines: List[str],
+) -> Tuple[str, str, int]:
+    """Resolves a raw IDE prompt via AST + group routing and builds compact native MOSS JSON."""
+    syntax_pos = check_prompt_syntax(raw_prompt)
+    if not syntax_pos.is_valid:
+        logger.warning("Positive prompt syntax issues:\n%s", "\n".join(syntax_pos.errors))
+        debug_lines.append("[Positive Prompt Syntax Issues]:\n" + "\n".join(syntax_pos.errors))
+
+    pos_ast = parse_prompt_to_ast(raw_prompt)
+    group_outputs, group_order, extracted_negative = resolve_ast_by_groups(pos_ast, rng)
+    pos_combos = count_ast_combinations(pos_ast)
+
+    outputs_by_lower = {k.strip().lower(): v for k, v in group_outputs.items()}
+    boxes = [b for b in (spatial_layout.get("boxes") or []) if isinstance(b, dict) and not b.get("localMuted")]
+    boxes.sort(key=lambda b: float(b.get("zIndex", 0)))
+
+    items: List[Dict[str, Any]] = []
+    boxed_keys = set()
+
+    for box in boxes:
+        raw_group = box.get("groupName")
+        group_key = raw_group.strip().lower() if isinstance(raw_group, str) and raw_group.strip() else ""
+        if group_key:
+            text = outputs_by_lower.get(group_key, "").strip()
+            if not text and not (box.get("role") == "text" and box.get("textContent")):
+                continue
+            boxed_keys.add(group_key)
+        else:
+            text = str(box.get("customCaption") or "").strip()
+            if not text and not (box.get("role") == "text" and box.get("textContent")):
+                continue
+
+        role = str(box.get("role") or "object")
+        item: Dict[str, Any] = {
+            "label": role,
+            "caption": text,
+        }
+        palette = box.get("palette")
+        if isinstance(palette, list) and len(palette) > 0:
+            item["palette"] = palette
+        if role == "text" and box.get("textContent"):
+            item["text"] = str(box["textContent"])
+        box2d = box.get("box2d")
+        if isinstance(box2d, list) and len(box2d) == 4:
+            item["bbox"] = _to_centralized_bbox(box2d)
+        items.append(item)
+
+    caption_parts: List[str] = []
+    base_caption = str(spatial_layout.get("baseCaption") or "").strip()
+    if base_caption:
+        caption_parts.append(base_caption)
+
+    for gname in group_order:
+        if gname.strip().lower() in boxed_keys:
+            continue
+        grp_text = group_outputs.get(gname, "").strip()
+        if grp_text:
+            caption_parts.append(grp_text)
+
+    if not items:
+        return ", ".join(caption_parts), extracted_negative, pos_combos
+
+    payload: Dict[str, Any] = {
+        "summary": {
+            "caption": ", ".join(caption_parts),
+        },
+        "items": items,
+        "bbox_coord_space": "abs_centralized",
+        "bbox_format": "yxyx",
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":")), extracted_negative, pos_combos
 
 
 def _resolve_json_value(
@@ -156,19 +248,29 @@ class ExpertTextPromptNode:
                 return (positive_prompt, final_negative, 0, debug_info)
 
         if use_json:
-            extracted_negatives: List[str] = []
-            combos_acc = [1]
-            resolved_payload = _resolve_json_value(
-                json_payload,
-                rng,
-                "",
-                extracted_negatives,
-                debug_lines,
-                combos_acc,
-            )
-            final_positive = json.dumps(resolved_payload, ensure_ascii=False, separators=(",", ":"))
-            extracted_negative = ", ".join(extracted_negatives)
-            pos_combos = combos_acc[0]
+            if isinstance(json_payload.get("__moss_ide_prompt__"), str) and isinstance(
+                json_payload.get("spatial_layout"), dict
+            ):
+                final_positive, extracted_negative, pos_combos = _resolve_moss_ide_envelope(
+                    json_payload["__moss_ide_prompt__"],
+                    json_payload["spatial_layout"],
+                    rng,
+                    debug_lines,
+                )
+            else:
+                extracted_negatives: List[str] = []
+                combos_acc = [1]
+                resolved_payload = _resolve_json_value(
+                    json_payload,
+                    rng,
+                    "",
+                    extracted_negatives,
+                    debug_lines,
+                    combos_acc,
+                )
+                final_positive = json.dumps(resolved_payload, ensure_ascii=False, separators=(",", ":"))
+                extracted_negative = ", ".join(extracted_negatives)
+                pos_combos = combos_acc[0]
         else:
             syntax_pos = check_prompt_syntax(positive_prompt)
             if not syntax_pos.is_valid:

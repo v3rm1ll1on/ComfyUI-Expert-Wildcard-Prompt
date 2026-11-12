@@ -435,7 +435,28 @@ def check_nodes_has_solo(nodes: List[ASTNode]) -> bool:
     return False
 
 
-def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[str, str]:
+def _filter_blacklisted_phrases(raw_pos_str: str, clean_negatives: List[str]) -> str:
+    """Filters comma-separated phrases against extracted negative word-boundary patterns."""
+    final_phrases = []
+    for phrase in raw_pos_str.split(","):
+        phrase = phrase.strip()
+        if not phrase:
+            continue
+
+        is_blacklisted = False
+        for neg_pattern in clean_negatives:
+            if re.search(r'\b' + neg_pattern + r'\b', phrase.lower()):
+                is_blacklisted = True
+                break
+
+        if not is_blacklisted:
+            final_phrases.append(phrase)
+
+    return ", ".join(final_phrases)
+
+
+def _resolve_ast_internal(groups: List[ASTGroup], rng: random.Random) -> Tuple[Dict[str, str], List[str], str, str]:
+    """Resolves AST groups into per-group outputs, ordered group names, combined positive, and negative strings."""
     has_solo = any(
         g.is_solo or check_nodes_has_solo(g.nodes)
         for g in groups if not g.is_muted
@@ -455,49 +476,55 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[s
         mode = "negative" if group.is_negative else "mute" if group.is_muted else "solo" if group.is_solo else "append" if hasattr(group, "prefix") and "+" in group.prefix else "overwrite"
         raw_pos.append(("__MARKER__", group.name, mode))
 
-        if group.is_muted and not (has_solo and group.is_solo): continue
+        if group.is_muted and not (has_solo and group.is_solo):
+            continue
 
         for node in group.nodes:
-            if not is_node_active(node, group.is_solo, group.is_muted): continue
+            if not is_node_active(node, group.is_solo, group.is_muted):
+                continue
             pos_tags, neg_tags = resolve_node(node, group.is_solo, group.is_muted, group.is_negative, rng, has_solo)
             raw_pos.extend(pos_tags)
             raw_neg.extend(neg_tags)
 
-    group_tags_pos = {}
-    group_order_pos = []
+    group_tags_pos: Dict[str, List[Tuple[str, str]]] = {}
+    group_order_pos: List[str] = []
     for item in raw_pos:
         if item[0] == "__MARKER__":
             _, name, mode = item
-            if name not in group_order_pos: group_order_pos.append(name)
+            if name not in group_order_pos:
+                group_order_pos.append(name)
             if mode in ["overwrite", "mute", "negative"]:
                 group_tags_pos[name] = []
         else:
             text, sep, gname = item
             if gname not in group_tags_pos:
                 group_tags_pos[gname] = []
-                if gname not in group_order_pos: group_order_pos.append(gname)
+                if gname not in group_order_pos:
+                    group_order_pos.append(gname)
             group_tags_pos[gname].append((text, sep))
-            
-    resolved_positive = []
+
+    resolved_positive: List[Tuple[str, str]] = []
     for gname in group_order_pos:
         resolved_positive.extend(group_tags_pos.get(gname, []))
 
-    group_tags_neg = {}
-    group_order_neg = []
+    group_tags_neg: Dict[str, List[Tuple[str, str]]] = {}
+    group_order_neg: List[str] = []
     for item in raw_neg:
         if item[0] == "__MARKER__":
             _, name, mode = item
-            if name not in group_order_neg: group_order_neg.append(name)
-            if mode in ["overwrite", "mute"]: 
+            if name not in group_order_neg:
+                group_order_neg.append(name)
+            if mode in ["overwrite", "mute"]:
                 group_tags_neg[name] = []
         else:
             text, sep, gname = item
             if gname not in group_tags_neg:
                 group_tags_neg[gname] = []
-                if gname not in group_order_neg: group_order_neg.append(gname)
+                if gname not in group_order_neg:
+                    group_order_neg.append(gname)
             group_tags_neg[gname].append((text, sep))
 
-    resolved_negative = []
+    resolved_negative: List[Tuple[str, str]] = []
     for gname in group_order_neg:
         resolved_negative.extend(group_tags_neg.get(gname, []))
 
@@ -506,27 +533,27 @@ def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[s
         clean_text, _ = parse_sdxl_weight(neg_text)
         clean_negatives.append(re.escape(clean_text.lower()))
 
-    # Build the raw positive string first so we can evaluate full comma-separated phrases
-    raw_pos_str = build_text_with_separators(resolved_positive)
-    
-    final_phrases = []
-    for phrase in raw_pos_str.split(","):
-        phrase = phrase.strip()
-        if not phrase:
-            continue
-            
-        is_blacklisted = False
-        for neg_pattern in clean_negatives:
-            # Word boundary regex \b
-            if re.search(r'\b' + neg_pattern + r'\b', phrase.lower()):
-                is_blacklisted = True
-                break
-                
-        if not is_blacklisted:
-            final_phrases.append(phrase)
+    group_outputs: Dict[str, str] = {}
+    for gname in group_order_pos:
+        raw_grp_str = build_text_with_separators(group_tags_pos.get(gname, []))
+        filtered_grp = _filter_blacklisted_phrases(raw_grp_str, clean_negatives)
+        if filtered_grp:
+            group_outputs[gname] = filtered_grp
 
-    pos_str = ", ".join(final_phrases)
+    raw_pos_str = build_text_with_separators(resolved_positive)
+    pos_str = _filter_blacklisted_phrases(raw_pos_str, clean_negatives)
     neg_str = build_text_with_separators(resolved_negative)
+    return group_outputs, group_order_pos, pos_str, neg_str
+
+
+def resolve_ast_by_groups(groups: List[ASTGroup], rng: random.Random) -> Tuple[Dict[str, str], List[str], str]:
+    """Resolves AST groups into per-group output dict, ordered group names, and negative string."""
+    group_outputs, group_order, _, neg_str = _resolve_ast_internal(groups, rng)
+    return group_outputs, group_order, neg_str
+
+
+def resolve_ast_to_prompt(groups: List[ASTGroup], rng: random.Random) -> Tuple[str, str]:
+    _, _, pos_str, neg_str = _resolve_ast_internal(groups, rng)
     return pos_str, neg_str
 
 

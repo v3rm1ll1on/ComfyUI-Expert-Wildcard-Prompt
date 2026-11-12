@@ -132,6 +132,66 @@ class TestExpertTextPromptNodeJsonMode(unittest.TestCase):
         # Normal parser strips outer braces as a single-option wildcard
         self.assertIn("[Resolved Positive Output]:", debug_info)
 
+    def test_moss_ide_envelope_routes_boxed_and_unboxed_nested_groups(self):
+        nested_prompt = """[GRP:MELANIE]
+{
+[GRP:CHARACTER], 1woman, adult, 40 years old, brown eyes, blond hair,
+[GRP:CLOTHING], tight summer dress, jacket,
+[GRP:POSE], hand on own cheek, sitting,
+[GRP:MAKEUP], lipstick, makeup, eyeshadow,
+}
+
+[GRP:ENVIRONMENT], restaurant, {indoors|outdoors, [GRP:MAKEUP],-lipstick,}, table, chair,
+[GRP:SPIDER], a spider sitting in a net,"""
+
+        envelope = {
+            "__moss_ide_prompt__": nested_prompt,
+            "spatial_layout": {
+                "targetWidth": 896,
+                "targetHeight": 1152,
+                "baseCaption": "RAW photo",
+                "boxes": [
+                    {
+                        "id": "b-spider",
+                        "name": "SPIDER",
+                        "groupName": "SPIDER",
+                        "role": "object",
+                        "customCaption": "",
+                        "box2d": [0, 0, 500, 500],
+                        "color": "#ec4899",
+                        "zIndex": 1,
+                        "localMuted": False,
+                    }
+                ],
+            },
+        }
+
+        pos, _, combos, debug_info = self.node.process(
+            positive_prompt=json.dumps(envelope),
+            negative_prompt="$negative",
+            negative_mode="auto (use $negative)",
+            seed=42,
+        )
+
+        self.assertNotIn("\n", pos)
+        resolved = json.loads(pos)
+        self.assertEqual(resolved["bbox_coord_space"], "abs_centralized")
+        self.assertEqual(resolved["bbox_format"], "yxyx")
+        self.assertEqual(len(resolved["items"]), 1)
+        self.assertEqual(resolved["items"][0]["label"], "object")
+        self.assertEqual(resolved["items"][0]["caption"], "a spider sitting in a net")
+        self.assertEqual(resolved["items"][0]["bbox"], [-512, -512, 0, 0])
+
+        summary_caption = resolved["summary"]["caption"]
+        self.assertIn("RAW photo", summary_caption)
+        self.assertIn("1woman, adult, 40 years old", summary_caption)
+        self.assertIn("tight summer dress, jacket", summary_caption)
+        self.assertIn("hand on own cheek, sitting", summary_caption)
+        self.assertIn("restaurant", summary_caption)
+        self.assertNotIn("a spider sitting in a net", summary_caption)
+        self.assertGreaterEqual(combos, 2)
+        self.assertIn("[Syntax OK]", debug_info)
+
 
 if __name__ == "__main__":
     unittest.main()
