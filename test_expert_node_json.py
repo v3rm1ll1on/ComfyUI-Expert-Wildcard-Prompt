@@ -78,6 +78,7 @@ class TestExpertTextPromptNodeJsonMode(unittest.TestCase):
         )
 
         resolved = json.loads(pos)
+        self.assertNotIn("\n", pos)
         self.assertEqual(resolved["summary"]["canvas"], "single")
         self.assertEqual(resolved["bbox_coord_space"], "abs_centralized")
         self.assertEqual(resolved["bbox_format"], "yxyx")
@@ -134,3 +135,4 @@ class TestExpertTextPromptNodeJsonMode(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -166,7 +166,7 @@ class ExpertTextPromptNode:
                 debug_lines,
                 combos_acc,
             )
-            final_positive = json.dumps(resolved_payload, ensure_ascii=False, indent=2)
+            final_positive = json.dumps(resolved_payload, ensure_ascii=False, separators=(",", ":"))
             extracted_negative = ", ".join(extracted_negatives)
             pos_combos = combos_acc[0]
         else:
