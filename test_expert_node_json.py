@@ -180,7 +180,8 @@ class TestExpertTextPromptNodeJsonMode(unittest.TestCase):
         self.assertEqual(len(resolved["items"]), 1)
         self.assertEqual(resolved["items"][0]["label"], "object")
         self.assertEqual(resolved["items"][0]["caption"], "a spider sitting in a net")
-        self.assertEqual(resolved["items"][0]["bbox"], [-512, -512, 0, 0])
+        # 896x1152 centralized: ymin=0 -> -576, xmin=0 -> -448, ymax=500 -> 0, xmax=500 -> 0
+        self.assertEqual(resolved["items"][0]["bbox"], [-576, -448, 0, 0])
 
         summary_caption = resolved["summary"]["caption"]
         self.assertIn("RAW photo", summary_caption)

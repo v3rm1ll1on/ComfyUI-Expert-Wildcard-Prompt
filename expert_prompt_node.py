@@ -24,7 +24,7 @@ except ImportError:
         count_ast_combinations
     )
 
-MOSS_CENTRALIZED_SPAN = 1024
+DEFAULT_MOSS_DIMENSION = 1024.0
 
 JSON_STRUCTURAL_KEYS = frozenset({
     "bbox_coord_space",
@@ -34,14 +34,14 @@ JSON_STRUCTURAL_KEYS = frozenset({
 })
 
 
-def _to_centralized_bbox(box2d: List[Any]) -> List[int]:
-    """Maps normalized [ymin, xmin, ymax, xmax] (0..1000) to centralized [-512..512] yxyx coords."""
+def _to_centralized_bbox(box2d: List[Any], width: float, height: float) -> List[int]:
+    """Maps normalized [ymin, xmin, ymax, xmax] (0..1000) to centralized pixel yxyx coords."""
     ymin, xmin, ymax, xmax = (float(box2d[0]), float(box2d[1]), float(box2d[2]), float(box2d[3]))
     return [
-        round(((ymin - 500.0) / 1000.0) * MOSS_CENTRALIZED_SPAN),
-        round(((xmin - 500.0) / 1000.0) * MOSS_CENTRALIZED_SPAN),
-        round(((ymax - 500.0) / 1000.0) * MOSS_CENTRALIZED_SPAN),
-        round(((xmax - 500.0) / 1000.0) * MOSS_CENTRALIZED_SPAN),
+        round(((ymin - 500.0) / 1000.0) * height),
+        round(((xmin - 500.0) / 1000.0) * width),
+        round(((ymax - 500.0) / 1000.0) * height),
+        round(((xmax - 500.0) / 1000.0) * width),
     ]
 
 
@@ -62,6 +62,8 @@ def _resolve_moss_ide_envelope(
     pos_combos = count_ast_combinations(pos_ast)
 
     outputs_by_lower = {k.strip().lower(): v for k, v in group_outputs.items()}
+    target_width = float(spatial_layout.get("targetWidth") or DEFAULT_MOSS_DIMENSION)
+    target_height = float(spatial_layout.get("targetHeight") or DEFAULT_MOSS_DIMENSION)
     boxes = [b for b in (spatial_layout.get("boxes") or []) if isinstance(b, dict) and not b.get("localMuted")]
     boxes.sort(key=lambda b: float(b.get("zIndex", 0)))
 
@@ -93,7 +95,7 @@ def _resolve_moss_ide_envelope(
             item["text"] = str(box["textContent"])
         box2d = box.get("box2d")
         if isinstance(box2d, list) and len(box2d) == 4:
-            item["bbox"] = _to_centralized_bbox(box2d)
+            item["bbox"] = _to_centralized_bbox(box2d, target_width, target_height)
         items.append(item)
 
     caption_parts: List[str] = []
