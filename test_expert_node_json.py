@@ -193,6 +193,60 @@ class TestExpertTextPromptNodeJsonMode(unittest.TestCase):
         self.assertGreaterEqual(combos, 2)
         self.assertIn("[Syntax OK]", debug_info)
 
+    def test_moss_ide_envelope_wrapper_group_collects_nested_child_groups(self):
+        nested_prompt = """[GRP:MELANIE],
+{
+[GRP:CHARACTER], 1woman, 40 years old,
+[GRP:CLOTHING], tight summer dress, jacket,
+[GRP:POSE], sitting,
+[GRP:MAKEUP], lipstick, makeup,
+}
+
+[GRP:ENVIRONMENT], restaurant, {indoors|outdoors, [GRP:MAKEUP],-lipstick,}, table,
+[GRP:AST], a little green spider,"""
+
+        envelope = {
+            "__moss_ide_prompt__": nested_prompt,
+            "spatial_layout": {
+                "targetWidth": 896,
+                "targetHeight": 1152,
+                "baseCaption": "",
+                "boxes": [
+                    {
+                        "id": "b-melanie",
+                        "name": "MELANIE",
+                        "groupName": "MELANIE",
+                        "role": "character",
+                        "customCaption": "",
+                        "box2d": [140, 390, 640, 890],
+                        "color": "#ec4899",
+                        "zIndex": 1,
+                        "localMuted": False,
+                    }
+                ],
+            },
+        }
+
+        pos, _, _, _ = self.node.process(
+            positive_prompt=json.dumps(envelope),
+            negative_prompt="$negative",
+            negative_mode="auto (use $negative)",
+            seed=42,
+        )
+
+        resolved = json.loads(pos)
+        self.assertEqual(len(resolved["items"]), 1)
+        melanie_caption = resolved["items"][0]["caption"]
+        self.assertIn("1woman, 40 years old", melanie_caption)
+        self.assertIn("tight summer dress, jacket", melanie_caption)
+        self.assertIn("sitting", melanie_caption)
+
+        summary_caption = resolved["summary"]["caption"]
+        self.assertIn("restaurant", summary_caption)
+        self.assertIn("a little green spider", summary_caption)
+        self.assertNotIn("1woman, 40 years old", summary_caption)
+        self.assertNotIn("tight summer dress", summary_caption)
+
 
 if __name__ == "__main__":
     unittest.main()

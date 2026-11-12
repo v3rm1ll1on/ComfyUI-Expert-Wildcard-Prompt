@@ -10,6 +10,7 @@ try:
         parse_prompt_to_ast,
         resolve_ast_to_prompt,
         resolve_ast_by_groups,
+        collect_group_children_map,
         combine_negative_prompts,
         check_prompt_syntax,
         count_ast_combinations
@@ -19,6 +20,7 @@ except ImportError:
         parse_prompt_to_ast,
         resolve_ast_to_prompt,
         resolve_ast_by_groups,
+        collect_group_children_map,
         combine_negative_prompts,
         check_prompt_syntax,
         count_ast_combinations
@@ -59,6 +61,7 @@ def _resolve_moss_ide_envelope(
 
     pos_ast = parse_prompt_to_ast(raw_prompt)
     group_outputs, group_order, extracted_negative = resolve_ast_by_groups(pos_ast, rng)
+    children_map = collect_group_children_map(pos_ast)
     pos_combos = count_ast_combinations(pos_ast)
 
     outputs_by_lower = {k.strip().lower(): v for k, v in group_outputs.items()}
@@ -74,7 +77,22 @@ def _resolve_moss_ide_envelope(
         raw_group = box.get("groupName")
         group_key = raw_group.strip().lower() if isinstance(raw_group, str) and raw_group.strip() else ""
         if group_key:
-            text = outputs_by_lower.get(group_key, "").strip()
+            direct_text = outputs_by_lower.get(group_key, "").strip()
+            child_keys = children_map.get(group_key, [])
+            if direct_text:
+                text = direct_text
+            elif child_keys:
+                child_parts = [
+                    outputs_by_lower.get(ck, "").strip()
+                    for ck in child_keys
+                    if outputs_by_lower.get(ck, "").strip()
+                ]
+                text = ", ".join(child_parts)
+                for ck in child_keys:
+                    boxed_keys.add(ck)
+            else:
+                text = ""
+
             if not text and not (box.get("role") == "text" and box.get("textContent")):
                 continue
             boxed_keys.add(group_key)

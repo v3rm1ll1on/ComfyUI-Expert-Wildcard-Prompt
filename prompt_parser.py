@@ -546,6 +546,33 @@ def _resolve_ast_internal(groups: List[ASTGroup], rng: random.Random) -> Tuple[D
     return group_outputs, group_order_pos, pos_str, neg_str
 
 
+def collect_group_children_map(groups: List[ASTGroup]) -> Dict[str, List[str]]:
+    """Maps each top-level group (lowercase) to ordered nested ASTGroupMarker names (lowercase)."""
+    def _walk_nodes(nodes: List[ASTNode], acc: List[str]) -> None:
+        for node in nodes:
+            if isinstance(node, ASTGroupMarker) and node.name:
+                key = node.name.strip().lower()
+                if key not in acc:
+                    acc.append(key)
+            elif isinstance(node, ASTWildcard):
+                for opt in node.options:
+                    _walk_nodes(opt.nodes, acc)
+
+    children_map: Dict[str, List[str]] = {}
+    for group in groups:
+        if group.is_negative or group.is_muted:
+            continue
+        parent_key = group.name.strip().lower()
+        nested: List[str] = []
+        _walk_nodes(group.nodes, nested)
+        if nested:
+            existing = children_map.setdefault(parent_key, [])
+            for child in nested:
+                if child not in existing:
+                    existing.append(child)
+    return children_map
+
+
 def resolve_ast_by_groups(groups: List[ASTGroup], rng: random.Random) -> Tuple[Dict[str, str], List[str], str]:
     """Resolves AST groups into per-group output dict, ordered group names, and negative string."""
     group_outputs, group_order, _, neg_str = _resolve_ast_internal(groups, rng)
