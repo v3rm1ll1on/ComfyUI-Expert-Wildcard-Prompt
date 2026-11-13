@@ -217,15 +217,20 @@ class PromptParser:
         is_muted = inherited_muted
         is_solo = inherited_solo
         is_negative = inherited_negative
+        explicit_muted = False
+        explicit_solo = False
+        explicit_negative = False
 
         if self.match("!"):
             is_solo = True
+            explicit_solo = True
             self.skip_whitespace()
         elif self.match("//_S_"):
             is_muted = False
             self.skip_whitespace()
         elif self.match("//"):
             is_muted = True
+            explicit_muted = True
             self.skip_whitespace()
 
         # Check for negative extraction prefix '-'
@@ -234,6 +239,7 @@ class PromptParser:
         if rem_minus.startswith("-") and not re.match(r"^-\d+(?:\.\d+)?(?:\s*[,\|\)]|$)", rem_minus):
             self.match("-")
             is_negative = True
+            explicit_negative = True
             self.skip_whitespace()
 
         if self.input.startswith("[GRP:", self.pos) or self.input.startswith("[+GRP:", self.pos):
@@ -243,15 +249,20 @@ class PromptParser:
                 grp_name = grp_match.group(2)
                 self.pos += len(grp_match.group(0))
                 self.skip_whitespace()
-                if is_solo: mode = "solo"
-                elif is_muted: mode = "mute"
-                elif is_negative: mode = "negative"
+                # A new group header starts a fresh group scope and must not inherit
+                # mute/solo/negative state from a preceding sibling group.
+                grp_solo = explicit_solo
+                grp_muted = explicit_muted
+                grp_negative = explicit_negative
+                if grp_solo: mode = "solo"
+                elif grp_muted: mode = "mute"
+                elif grp_negative: mode = "negative"
                 elif is_append: mode = "append"
                 else: mode = "overwrite"
-                marker = ASTGroupMarker(name=grp_name, mode=mode, is_solo=is_solo, is_muted=is_muted, is_negative=is_negative)
-                marker.grp_solo_status = is_solo
-                marker.grp_muted_status = is_muted
-                marker.grp_negative_status = is_negative
+                marker = ASTGroupMarker(name=grp_name, mode=mode, is_solo=grp_solo, is_muted=grp_muted, is_negative=grp_negative)
+                marker.grp_solo_status = grp_solo
+                marker.grp_muted_status = grp_muted
+                marker.grp_negative_status = grp_negative
                 return marker
 
         if self.peek() == "{":
